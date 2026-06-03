@@ -13,7 +13,7 @@ export function Footer() {
               <span className="font-mono font-bold text-lg tracking-tight">killswitch-ai</span>
             </div>
             <p className="text-muted-foreground text-sm max-w-xs">
-              The AI firewall for your LLM stack. A silent, local guardian that catches credentials and PII before they reach the cloud.
+              The AI Kill Switch. A silent, local guardian that catches credentials and PII before they reach the cloud.
             </p>
             <div className="flex gap-4 pt-2">
               <a href="https://github.com/killswitch-ai/killswitch-ai" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
