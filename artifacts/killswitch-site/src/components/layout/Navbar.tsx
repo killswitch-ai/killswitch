@@ -17,6 +17,7 @@ export function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
+            <Link href="/demo" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors border border-primary/30 px-3 py-1 font-mono">▶ Demo</Link>
             <Link href="/docs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
             <Link href="/features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</Link>
             <Link href="/quickstart" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Quickstart</Link>
@@ -45,6 +46,7 @@ export function Navbar() {
       {/* Mobile Nav */}
       {isOpen && (
         <div className="md:hidden border-t border-white/10 bg-background px-4 py-4 space-y-4">
+          <Link href="/demo" className="block text-sm font-medium text-primary hover:text-primary/80 py-2 font-mono" onClick={() => setIsOpen(false)}>▶ Demo</Link>
           <Link href="/docs" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Docs</Link>
           <Link href="/features" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Features</Link>
           <Link href="/quickstart" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Quickstart</Link>

@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 
 import Home from "@/pages/Home";
 import Docs from "@/pages/Docs";
+import Demo from "@/pages/Demo";
 import Features from "@/pages/Features";
 import Quickstart from "@/pages/Quickstart";
 import WhyKillswitch from "@/pages/WhyKillswitch";
@@ -17,6 +18,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/demo" component={Demo} />
       <Route path="/docs" component={Docs} />
       <Route path="/features" component={Features} />
       <Route path="/quickstart" component={Quickstart} />
