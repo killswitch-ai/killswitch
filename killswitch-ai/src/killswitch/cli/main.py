@@ -11,9 +11,10 @@ def main() -> None:
         prog="killswitch",
         description="killswitch-ai — local LLM egress control",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,
         epilog="""
 commands:
-  init          Set up killswitch-ai in this project (interactive wizard)
+  init          Set up killswitch in this project (interactive wizard)
   menu          Open the interactive report and settings menu
   status        Show current mode and last session summary
   scan <text>   Test the scanner on a piece of text
@@ -45,6 +46,12 @@ verbose output (for scan):
   environment to enable verbose output for your Python scripts too:
     KILLSWITCH_VERBOSE=2 python my_app.py
 """,
+    )
+    parser.add_argument(
+        "-h", "--help",
+        action="store_true",
+        dest="open_menu",
+        help="Open the interactive menu (change mode, view stats, settings)",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -111,8 +118,8 @@ verbose output (for scan):
 
     args = parser.parse_args()
 
-    if args.command is None:
-        parser.print_help()
+    if getattr(args, "open_menu", False) or args.command is None:
+        _cmd_menu()
         return
 
     if args.command == "init":

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "killswitch"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local LLM egress control — stop secrets before they reach the LLM"
 readme = "README.md"
 license = { text = "MIT" }
