@@ -6,6 +6,7 @@ import { HelmetProvider } from "react-helmet-async";
 import NotFound from "@/pages/not-found";
 
 import Home from "@/pages/Home";
+import Docs from "@/pages/Docs";
 import Features from "@/pages/Features";
 import Quickstart from "@/pages/Quickstart";
 import WhyKillswitch from "@/pages/WhyKillswitch";
@@ -16,6 +17,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/docs" component={Docs} />
       <Route path="/features" component={Features} />
       <Route path="/quickstart" component={Quickstart} />
       <Route path="/why-killswitch" component={WhyKillswitch} />

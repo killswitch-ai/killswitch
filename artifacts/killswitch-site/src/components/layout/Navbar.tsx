@@ -17,6 +17,7 @@ export function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
+            <Link href="/docs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
             <Link href="/features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</Link>
             <Link href="/quickstart" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Quickstart</Link>
             <Link href="/why-killswitch" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Why It Matters</Link>
@@ -26,7 +27,7 @@ export function Navbar() {
                 <Github className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </a>
-              <Link href="/quickstart" className="inline-flex">
+              <Link href="/docs" className="inline-flex">
                 <Button size="sm" className="font-mono">
                   <Terminal className="mr-2 h-4 w-4" /> pip install
                 </Button>
@@ -44,6 +45,7 @@ export function Navbar() {
       {/* Mobile Nav */}
       {isOpen && (
         <div className="md:hidden border-t border-white/10 bg-background px-4 py-4 space-y-4">
+          <Link href="/docs" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Docs</Link>
           <Link href="/features" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Features</Link>
           <Link href="/quickstart" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Quickstart</Link>
           <Link href="/why-killswitch" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Why It Matters</Link>
@@ -51,7 +53,7 @@ export function Navbar() {
             <a href="https://github.com/killswitch-ai/killswitch-ai" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
               <Github className="h-5 w-5" /> GitHub Repository
             </a>
-            <Link href="/quickstart" className="inline-flex w-full" onClick={() => setIsOpen(false)}>
+            <Link href="/docs" className="inline-flex w-full" onClick={() => setIsOpen(false)}>
               <Button size="sm" className="w-full font-mono justify-center">
                 <Terminal className="mr-2 h-4 w-4" /> pip install killswitch-ai
               </Button>

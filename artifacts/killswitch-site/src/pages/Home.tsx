@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Terminal, Shield, ArrowRight, ShieldBan, ShieldAlert, ShieldCheck, Github } from "lucide-react";
+import { Terminal, Shield, ArrowRight, ShieldBan, ShieldAlert, ShieldCheck, Github, Copy, Check as CheckIcon } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/Navbar";
@@ -8,6 +8,14 @@ import { Footer } from "@/components/layout/Footer";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 
 export default function Home() {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText("pip install killswitch-ai");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
     <div className="min-h-screen flex flex-col dark bg-background selection:bg-primary/30">
       <Helmet>
@@ -45,27 +53,43 @@ export default function Home() {
                 A silent, local guardian that catches credentials, API keys, and PII before they ever reach OpenAI or Anthropic.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-primary/50 blur opacity-30 group-hover:opacity-100 transition duration-500 rounded-lg"></div>
-                  <div className="relative flex items-center bg-black border border-white/20 rounded-lg px-4 py-3 font-mono text-sm shadow-xl">
-                    <Terminal className="h-4 w-4 text-muted-foreground mr-3" />
-                    <span className="text-foreground">pip install killswitch-ai</span>
-                    <button 
-                      onClick={() => navigator.clipboard.writeText("pip install killswitch-ai")}
-                      className="ml-4 text-muted-foreground hover:text-white transition-colors"
-                      aria-label="Copy install command"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                    </button>
-                  </div>
+              <div className="pt-8 flex flex-col items-center gap-5 w-full">
+                <div className="relative group w-full max-w-xl">
+                  <div className="absolute -inset-1 bg-primary/40 blur-lg opacity-40 group-hover:opacity-80 transition duration-500 rounded-xl"></div>
+                  <button
+                    onClick={handleCopy}
+                    data-testid="button-copy-install"
+                    className="relative w-full flex items-center justify-between bg-black border border-white/20 hover:border-primary/60 rounded-xl px-6 py-5 font-mono text-lg shadow-2xl transition-all group-hover:shadow-primary/20 cursor-pointer"
+                    aria-label="Copy install command"
+                  >
+                    <div className="flex items-center gap-4">
+                      <Terminal className="h-5 w-5 text-primary shrink-0" />
+                      <span className="text-foreground tracking-wide">pip install killswitch-ai</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground ml-6 shrink-0">
+                      {copied ? (
+                        <>
+                          <CheckIcon className="h-4 w-4 text-green-400" />
+                          <span className="text-green-400">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
                 </div>
-                
-                <Link href="/quickstart">
-                  <Button size="lg" className="h-[50px] px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-primary/25 transition-all">
-                    Get Started <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                  <Link href="/docs" className="hover:text-primary transition-colors inline-flex items-center gap-1">
+                    Read the docs <ArrowRight className="h-3 w-3" />
+                  </Link>
+                  <span className="text-white/20">·</span>
+                  <a href="https://github.com/killswitch-ai/killswitch-ai" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors inline-flex items-center gap-1">
+                    <Github className="h-3 w-3" /> View on GitHub
+                  </a>
+                </div>
               </div>
             </div>
           </div>

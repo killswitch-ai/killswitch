@@ -30,6 +30,7 @@ export function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Product</h4>
             <ul className="space-y-2">
+              <li><Link href="/docs" className="text-sm text-muted-foreground hover:text-primary transition-colors">Docs</Link></li>
               <li><Link href="/features" className="text-sm text-muted-foreground hover:text-primary transition-colors">Features</Link></li>
               <li><Link href="/quickstart" className="text-sm text-muted-foreground hover:text-primary transition-colors">Quickstart</Link></li>
               <li><Link href="/why-killswitch" className="text-sm text-muted-foreground hover:text-primary transition-colors">Why It Matters</Link></li>
@@ -39,7 +40,7 @@ export function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Resources</h4>
             <ul className="space-y-2">
-              <li><a href="https://github.com/killswitch-ai/killswitch-ai" className="text-sm text-muted-foreground hover:text-primary transition-colors">Documentation</a></li>
+              <li><a href="https://github.com/killswitch-ai/killswitch-ai" className="text-sm text-muted-foreground hover:text-primary transition-colors">GitHub</a></li>
               <li><a href="https://github.com/killswitch-ai/killswitch-ai/issues" className="text-sm text-muted-foreground hover:text-primary transition-colors">Report an Issue</a></li>
               <li><a href="https://github.com/killswitch-ai/killswitch-ai/pulls" className="text-sm text-muted-foreground hover:text-primary transition-colors">Contribute</a></li>
             </ul>
