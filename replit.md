@@ -1,45 +1,62 @@
-# [Project name]
+# killswitch-ai
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A pip-installable Python library that stops secrets and sensitive data from reaching LLMs — scanning prompts, messages, and payloads locally before any request is sent.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `cd killswitch-ai && pip install -e ".[dev]"` — install library in dev mode
+- `cd killswitch-ai && pytest` — run all tests
+- `killswitch init` — interactive setup wizard (after install)
+- `killswitch menu` — local report browser (after install)
+- `killswitch status` — show current mode and stats
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Pure Python 3.9+ library
+- No mandatory dependencies (only `pyyaml`)
+- Optional: `openai>=1.0`, `anthropic>=0.20`
+- Tests: `pytest`
+- Build: `hatchling`
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `killswitch-ai/` — Python package root
+- `killswitch-ai/src/killswitch_ai/` — library source
+  - `core/` — config, normalizer, scanner, policy, decision, redactor
+  - `providers/` — GuardedOpenAI, GuardedAnthropic wrappers
+  - `logging/` — local JSONL event logger
+  - `reporting/` — email report builder
+  - `cli/` — argparse CLI entry point, wizard, menu
+- `killswitch-ai/tests/` — pytest test suite
+- `killswitch-ai/README.md` — full usage documentation
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Layered scanner (5 layers): prohibited terms → regex patterns → entropy → sensitive paths → structured payload scanning
+- Local-first: nothing leaves the machine for inspection
+- Four modes: kill, pause, redact, report_only
+- Logs store only metadata (event ID, finding type, severity, decision) — never raw prompts or secret values
+- Email reports use hashed install/project IDs — never actual paths or secrets
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+killswitch-ai is a developer security library. Python developers add it to any LLM project to automatically scan outgoing payloads. Key features:
+- Wraps OpenAI and Anthropic clients transparently
+- Detects API keys, private keys, database URLs, JWTs, high-entropy strings
+- Beginner-friendly CLI menu for browsing local reports
+- Opt-in weekly email summaries (anonymized counts only)
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+_Populate as you build._
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Install with `pip install -e ".[dev]"` from the `killswitch-ai/` directory
+- Config is read from `killswitch.yml` in the current working directory
+- Log directory defaults to `.killswitch/` relative to cwd
+- `killswitch_ai.install()` monkeypatches at import time — call before importing openai/anthropic
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See the `pnpm-workspace` skill for Node.js workspace structure
