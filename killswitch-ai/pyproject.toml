@@ -43,9 +43,9 @@ dev = [
 killswitch = "killswitch.cli.main:main"
 
 [project.urls]
-Homepage = "https://github.com/killswitch-ai/killswitch-ai"
+Homepage = "https://github.com/j15marti/killswitch"
 Documentation = "https://killswitch-ai.dev"
-"Bug Tracker" = "https://github.com/killswitch-ai/killswitch-ai/issues"
+"Bug Tracker" = "https://github.com/j15marti/killswitch/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/killswitch"]

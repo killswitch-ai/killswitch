@@ -16,7 +16,7 @@ export function Footer() {
               The AI Kill Switch. A silent, local guardian that catches credentials and PII before they reach the cloud.
             </p>
             <div className="flex gap-4 pt-2">
-              <a href="https://github.com/killswitch-ai/killswitch-ai" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+              <a href="https://github.com/j15marti/killswitch" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                 <Github className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </a>
@@ -40,9 +40,9 @@ export function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Resources</h4>
             <ul className="space-y-2">
-              <li><a href="https://github.com/killswitch-ai/killswitch-ai" className="text-sm text-muted-foreground hover:text-primary transition-colors">GitHub</a></li>
-              <li><a href="https://github.com/killswitch-ai/killswitch-ai/issues" className="text-sm text-muted-foreground hover:text-primary transition-colors">Report an Issue</a></li>
-              <li><a href="https://github.com/killswitch-ai/killswitch-ai/pulls" className="text-sm text-muted-foreground hover:text-primary transition-colors">Contribute</a></li>
+              <li><a href="https://github.com/j15marti/killswitch" className="text-sm text-muted-foreground hover:text-primary transition-colors">GitHub</a></li>
+              <li><a href="https://github.com/j15marti/killswitch/issues" className="text-sm text-muted-foreground hover:text-primary transition-colors">Report an Issue</a></li>
+              <li><a href="https://github.com/j15marti/killswitch/pulls" className="text-sm text-muted-foreground hover:text-primary transition-colors">Contribute</a></li>
             </ul>
           </div>
         </div>
