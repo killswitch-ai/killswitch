@@ -167,8 +167,8 @@ export default function Docs() {
               <p className="mt-4 mb-2 text-muted-foreground">
                 The fastest way to protect your OpenAI calls is <code className="font-mono text-sm text-primary">install()</code>, which patches the SDK globally:
               </p>
-              <CodeBlock language="python" className="mt-4" code={`import killswitch_ai
-killswitch_ai.install()  # patches openai + anthropic globally
+              <CodeBlock language="python" className="mt-4" code={`import killswitch
+killswitch.install()  # patches openai + anthropic globally
 
 from openai import OpenAI
 client = OpenAI()
@@ -181,7 +181,7 @@ response = client.chat.completions.create(
               <p className="mt-6 text-muted-foreground">
                 Or use the context manager for block-scoped protection:
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch_ai import killswitch
+              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
 import openai
 
 with killswitch(mode="kill"):
@@ -244,7 +244,7 @@ with killswitch(mode="kill"):
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 The <code className="font-mono text-sm text-primary">killswitch</code> context manager patches OpenAI and Anthropic for the duration of its block, then restores the originals.
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch_ai import killswitch
+              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
 
 with killswitch(mode="redact"):
     response = openai.chat.completions.create(
@@ -280,7 +280,7 @@ with killswitch(mode="redact"):
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 Wrap any function that calls an LLM. The decorator applies the same scanning as the context manager to every invocation of the function.
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch_ai import killswitch
+              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
 from openai import OpenAI
 
 client = OpenAI()
@@ -307,7 +307,7 @@ def summarize(text: str) -> str:
 
               <SubHeading id="guarded-openai">GuardedOpenAI</SubHeading>
               <CodeBlock language="python" code={`from openai import OpenAI
-from killswitch_ai.openai import GuardedOpenAI
+from killswitch.openai import GuardedOpenAI
 
 client = GuardedOpenAI(OpenAI())
 
@@ -325,7 +325,7 @@ response = client.responses.create(
 
               <SubHeading id="guarded-anthropic">GuardedAnthropic</SubHeading>
               <CodeBlock language="python" code={`from anthropic import Anthropic
-from killswitch_ai.anthropic import GuardedAnthropic
+from killswitch.anthropic import GuardedAnthropic
 
 client = GuardedAnthropic(Anthropic())
 
@@ -337,15 +337,15 @@ message = client.messages.create(
 
               <SubHeading id="install-helper">Global install()</SubHeading>
               <p className="text-muted-foreground">
-                <code className="font-mono text-sm text-primary">killswitch_ai.install()</code> monkey-patches both <code className="font-mono text-sm">openai</code> and <code className="font-mono text-sm">anthropic</code> modules so all existing client instances are automatically protected.
+                <code className="font-mono text-sm text-primary">killswitch.install()</code> monkey-patches both <code className="font-mono text-sm">openai</code> and <code className="font-mono text-sm">anthropic</code> modules so all existing client instances are automatically protected.
               </p>
-              <CodeBlock language="python" className="mt-4" code={`import killswitch_ai
+              <CodeBlock language="python" className="mt-4" code={`import killswitch
 
 # Call once at application startup — before any client is created
-killswitch_ai.install()
+killswitch.install()
 
 # Optionally uninstall (restores original SDKs)
-killswitch_ai.uninstall()`} />
+killswitch.uninstall()`} />
             </section>
 
             {/* ── Detection Layers ── */}
@@ -526,15 +526,15 @@ meta:
               <SectionAnchor id="exceptions" />
               <SectionHeading id="exceptions">Exceptions</SectionHeading>
               <p className="mt-4 mb-6 text-muted-foreground">
-                All exceptions are importable from <code className="font-mono text-sm text-primary">killswitch_ai.exceptions</code>.
+                All exceptions are importable from <code className="font-mono text-sm text-primary">killswitch.exceptions</code>.
               </p>
 
               <SubHeading id="killswitch-blocked">KillswitchBlocked</SubHeading>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Raised in <code className="font-mono text-xs">kill</code> mode (and in <code className="font-mono text-xs">pause</code> mode if the user chooses to block). Inherits from <code className="font-mono text-xs">RuntimeError</code>.
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch_ai import killswitch
-from killswitch_ai.exceptions import KillswitchBlocked
+              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
+from killswitch.exceptions import KillswitchBlocked
 
 try:
     with killswitch(mode="kill"):

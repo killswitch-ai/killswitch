@@ -56,7 +56,7 @@ def execute_decision(
             _v.v2(f"  → No secret value is stored in the logs.")
             _v.v2(f"  → To handle this, wrap your call:")
             _v.v2(f"")
-            _v.v2(f"       from killswitch_ai.exceptions import KillswitchBlocked")
+            _v.v2(f"       from killswitch.exceptions import KillswitchBlocked")
             _v.v2(f"       try:")
             _v.v2(f"           response = client.chat.completions.create(...)")
             _v.v2(f"       except KillswitchBlocked as e:")

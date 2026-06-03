@@ -79,7 +79,7 @@ export default function Quickstart() {
               <div className="ml-12">
                 <CodeBlock 
                   language="python" 
-                  code={`from killswitch_ai import killswitch
+                  code={`from killswitch import killswitch
 import openai
 
 # Any potential secrets in user_input will be caught

@@ -10,7 +10,7 @@ Controls how much diagnostic text killswitch prints to stderr while it works.
 
 Set via:
   Environment variable:  KILLSWITCH_VERBOSE=1   or   KILLSWITCH_VERBOSE=2
-  Python API:            killswitch_ai.install(verbose=2)
+  Python API:            killswitch.install(verbose=2)
   CLI (scan command):    killswitch scan -v "..."
                          killswitch scan --super-verbose "..."
 """

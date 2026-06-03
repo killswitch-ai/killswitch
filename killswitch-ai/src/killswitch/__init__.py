@@ -7,14 +7,14 @@ Quick start::
 
     # Option 1: Explicit wrapper (recommended)
     from openai import OpenAI
-    from killswitch_ai.openai import GuardedOpenAI
+    from killswitch.openai import GuardedOpenAI
 
     client = GuardedOpenAI(OpenAI())
     response = client.responses.create(model="gpt-4o", input="...")
 
     # Option 2: One-liner monkeypatch
-    import killswitch_ai
-    killswitch_ai.install()
+    import killswitch
+    killswitch.install()
 
     from openai import OpenAI
     client = OpenAI()  # now automatically guarded
@@ -22,8 +22,8 @@ Quick start::
 Verbose output::
 
     # See every step killswitch takes — great for debugging or learning
-    killswitch_ai.install(verbose=1)   # key milestones
-    killswitch_ai.install(verbose=2)   # every pattern check, entropy score, decision
+    killswitch.install(verbose=1)   # key milestones
+    killswitch.install(verbose=2)   # every pattern check, entropy score, decision
 
     # Or set via environment variable (works with any usage style):
     # KILLSWITCH_VERBOSE=1 python your_script.py
@@ -55,10 +55,10 @@ def install(mode: str | None = None, verbose: int = 0) -> None:
 
     Usage::
 
-        import killswitch_ai
-        killswitch_ai.install()              # uses killswitch.yml mode (or "pause")
-        killswitch_ai.install("kill")        # override mode for this session
-        killswitch_ai.install(verbose=2)     # see exactly what killswitch is doing
+        import killswitch
+        killswitch.install()              # uses killswitch.yml mode (or "pause")
+        killswitch.install("kill")        # override mode for this session
+        killswitch.install(verbose=2)     # see exactly what killswitch is doing
     """
     from . import verbose as _verbose
     from .core.config import get_config, set_config
@@ -167,13 +167,13 @@ def scan(text: str, verbose: int = 0) -> "ScanResult":
 
     Usage::
 
-        import killswitch_ai
-        result = killswitch_ai.scan("my API_KEY is sk-proj-abc123...")
+        import killswitch
+        result = killswitch.scan("my API_KEY is sk-proj-abc123...")
         for finding in result.findings:
             print(finding.description)
 
         # See every step:
-        result = killswitch_ai.scan("...", verbose=2)
+        result = killswitch.scan("...", verbose=2)
     """
     from . import verbose as _verbose
     from .core.config import get_config

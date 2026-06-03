@@ -29,8 +29,8 @@ pip install "killswitch[all]"         # Both
 ### Option 1 — One-liner (easiest)
 
 ```python
-import killswitch_ai
-killswitch_ai.install()
+import killswitch
+killswitch.install()
 
 from openai import OpenAI
 client = OpenAI()
@@ -46,7 +46,7 @@ response = client.responses.create(
 
 ```python
 from openai import OpenAI
-from killswitch_ai.openai import GuardedOpenAI
+from killswitch.openai import GuardedOpenAI
 
 client = GuardedOpenAI(OpenAI())
 
@@ -60,7 +60,7 @@ response = client.responses.create(
 
 ```python
 from anthropic import Anthropic
-from killswitch_ai.anthropic import GuardedAnthropic
+from killswitch.anthropic import GuardedAnthropic
 
 client = GuardedAnthropic(Anthropic())
 
@@ -74,9 +74,9 @@ response = client.messages.create(
 ### Scan text directly
 
 ```python
-import killswitch_ai
+import killswitch
 
-result = killswitch_ai.scan("my API_KEY is sk-proj-abc123...")
+result = killswitch.scan("my API_KEY is sk-proj-abc123...")
 for finding in result.findings:
     print(finding.severity, finding.description)
 ```

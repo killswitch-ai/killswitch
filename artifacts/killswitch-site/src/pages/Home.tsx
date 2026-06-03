@@ -139,7 +139,7 @@ export default function Home() {
                 <CodeBlock 
                   language="python"
                   className="shadow-2xl"
-                  code={`from killswitch_ai import killswitch
+                  code={`from killswitch import killswitch
 import openai
 
 # A careless developer logs an entire environment dict

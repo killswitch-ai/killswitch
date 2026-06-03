@@ -117,7 +117,7 @@ export default function Features() {
                 <p className="text-muted-foreground mb-4">The cleanest way to wrap specific API calls without modifying the underlying client.</p>
                 <CodeBlock 
                   language="python"
-                  code={`from killswitch_ai import killswitch
+                  code={`from killswitch import killswitch
 import openai
 
 # Protects any outbound LLM calls made within this block
@@ -134,7 +134,7 @@ with killswitch(mode="kill"):
                 <p className="text-muted-foreground mb-4">Ideal for securing internal wrapper functions or specialized LLM agents.</p>
                 <CodeBlock 
                   language="python"
-                  code={`from killswitch_ai import killswitch
+                  code={`from killswitch import killswitch
 import anthropic
 
 @killswitch(mode="redact")

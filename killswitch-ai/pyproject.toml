@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-killswitch = "killswitch_ai.cli.main:main"
+killswitch = "killswitch.cli.main:main"
 
 [project.urls]
 Homepage = "https://github.com/killswitch-ai/killswitch-ai"
@@ -48,7 +48,7 @@ Documentation = "https://killswitch-ai.dev"
 "Bug Tracker" = "https://github.com/killswitch-ai/killswitch-ai/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/killswitch_ai"]
+packages = ["src/killswitch"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
