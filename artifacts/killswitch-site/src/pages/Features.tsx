@@ -22,7 +22,7 @@ export default function Features() {
       <main className="flex-1">
         <div className="container mx-auto px-4 md:px-6 py-20">
           <div className="max-w-3xl mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">Defense in Depth.</h1>
+            <h1 className="font-display text-5xl md:text-7xl font-bold uppercase tracking-tight mb-6">Defense in Depth.</h1>
             <p className="text-xl text-muted-foreground">
               killswitch-ai isn't a simple regex filter. It's a comprehensive scanning pipeline that deeply inspects payloads across 5 detection layers and enforces policy through 4 execution modes.
             </p>
@@ -109,7 +109,7 @@ export default function Features() {
           </div>
           
           <div className="mt-24 max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8">Implementation Patterns</h2>
+            <h2 className="font-display text-4xl font-bold uppercase tracking-tight mb-8">Implementation Patterns</h2>
             
             <div className="space-y-8">
               <div>

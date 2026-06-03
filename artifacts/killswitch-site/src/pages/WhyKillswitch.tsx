@@ -21,7 +21,7 @@ export default function WhyKillswitch() {
       <main className="flex-1">
         <div className="container mx-auto px-4 md:px-6 py-20 max-w-4xl">
           <div className="mb-16 text-center">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">Why LLM Egress Control Matters.</h1>
+            <h1 className="font-display text-5xl md:text-7xl font-bold uppercase tracking-tight mb-6">Why LLM Egress Control Matters.</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               AI safety isn't just about what models generate. It's about what you inadvertently send them.
             </p>

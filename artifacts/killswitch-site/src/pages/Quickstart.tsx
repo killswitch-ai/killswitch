@@ -24,7 +24,7 @@ export default function Quickstart() {
       <main className="flex-1">
         <div className="container mx-auto px-4 md:px-6 py-20 max-w-4xl">
           <div className="mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Quickstart</h1>
+            <h1 className="font-display text-5xl md:text-7xl font-bold uppercase tracking-tight mb-4">Quickstart</h1>
             <p className="text-xl text-muted-foreground">
               Install, configure, and secure your LLM egress traffic in under 5 minutes.
             </p>

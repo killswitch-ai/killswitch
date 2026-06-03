@@ -43,12 +43,14 @@ export default function Home() {
           
           <div className="container mx-auto px-4 md:px-6 relative z-10">
             <div className="max-w-4xl mx-auto text-center space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-muted-foreground mb-4">
-                <Shield className="h-4 w-4 text-primary" />
-                <span>Zero-trust LLM egress control</span>
+              <div className="inline-flex items-center gap-3 px-4 py-1.5 border border-primary/40 bg-primary/5 text-xs font-mono tracking-widest mb-4 warning-stripe">
+                <span className="blink text-primary">█</span>
+                <span className="text-primary uppercase">Protocol Active</span>
+                <span className="text-primary/30">|</span>
+                <span className="text-muted-foreground">Zero-trust LLM egress control</span>
               </div>
-              
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tight font-sans text-glow">
+
+              <h1 className="font-display text-6xl md:text-8xl font-bold uppercase tracking-tight text-glow leading-none">
                 The seatbelt for <br />
                 <span className="text-primary">AI-powered</span> teams.
               </h1>
@@ -104,7 +106,7 @@ export default function Home() {
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-6">
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Stop prompt injections from leaking your infrastructure.</h2>
+                <h2 className="font-display text-4xl md:text-5xl font-bold uppercase tracking-tight">Stop prompt injections from leaking your infrastructure.</h2>
                 <p className="text-lg text-muted-foreground leading-relaxed">
                   When your RAG pipeline blindly appends context to a prompt, you lose control over what gets sent. killswitch-ai sits between your code and the network, scanning every outbound payload.
                 </p>
