@@ -122,7 +122,7 @@ export default function Home() {
               </div>
               
               <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-blue-600/30 blur-xl opacity-50"></div>
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-red-900/30 blur-xl opacity-50"></div>
                 <CodeBlock 
                   language="python"
                   className="shadow-2xl"
@@ -165,8 +165,8 @@ with killswitch(mode="kill"):
                 </p>
               </div>
               
-              <div className="bg-card border border-border p-8 rounded-xl hover:border-blue-500/50 transition-colors group">
-                <ShieldCheck className="h-10 w-10 text-blue-500 mb-6 group-hover:scale-110 transition-transform" />
+              <div className="bg-card border border-border p-8 rounded-xl hover:border-primary/50 transition-colors group">
+                <ShieldCheck className="h-10 w-10 text-primary mb-6 group-hover:scale-110 transition-transform" />
                 <h3 className="text-xl font-bold font-mono mb-3">mode="redact"</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   Intelligent masking. Silently replaces the sensitive string with <span className="font-mono text-xs bg-white/10 px-1 py-0.5 rounded">[REDACTED]</span> and allows the API call.

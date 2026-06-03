@@ -86,11 +86,11 @@ export default function Features() {
                     <p className="text-sm text-muted-foreground">Stops execution and prompts the developer in the terminal (y/n) to review the payload before sending.</p>
                   </div>
 
-                  <div className="p-4 rounded-lg bg-blue-950/20 border border-blue-900/50">
-                    <h3 className="font-mono font-bold text-blue-400 mb-2 flex items-center gap-2">
+                  <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
+                    <h3 className="font-mono font-bold text-primary mb-2 flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4" /> mode="redact"
                     </h3>
-                    <p className="text-sm text-muted-foreground">Silently replaces sensitive values with <code className="text-blue-400">[REDACTED]</code> and allows the API call to proceed safely.</p>
+                    <p className="text-sm text-muted-foreground">Silently replaces sensitive values with <code className="text-primary">[REDACTED]</code> and allows the API call to proceed safely.</p>
                   </div>
 
                   <div className="p-4 rounded-lg bg-white/5 border border-white/10">

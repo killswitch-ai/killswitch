@@ -145,7 +145,7 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* Default to Dark Mode for the App Vibe */
+/* Default to Dark Mode for the App Vibe — emergency kill-switch theme */
 .dark, :root {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
@@ -153,53 +153,54 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  /* Core background is very dark, slight cool tint */
-  --background: 224 71% 4%;
-  --foreground: 213 31% 91%;
+  /* Pure black background */
+  --background: 0 0% 4%;
+  --foreground: 0 0% 92%;
   
-  --border: 216 34% 17%;
+  /* Borders with a subtle red tint */
+  --border: 0 20% 14%;
   
-  --card: 224 71% 4%;
-  --card-foreground: 213 31% 91%;
-  --card-border: 216 34% 17%;
+  --card: 0 0% 6%;
+  --card-foreground: 0 0% 92%;
+  --card-border: 0 20% 14%;
   
-  --sidebar: 224 71% 4%;
-  --sidebar-foreground: 213 31% 91%;
-  --sidebar-border: 216 34% 17%;
-  --sidebar-primary: 210 100% 50%;
+  --sidebar: 0 0% 4%;
+  --sidebar-foreground: 0 0% 92%;
+  --sidebar-border: 0 20% 14%;
+  --sidebar-primary: 0 88% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 216 34% 17%;
-  --sidebar-accent-foreground: 213 31% 91%;
-  --sidebar-ring: 210 100% 50%;
+  --sidebar-accent: 0 15% 13%;
+  --sidebar-accent-foreground: 0 0% 92%;
+  --sidebar-ring: 0 88% 55%;
   
-  --popover: 224 71% 4%;
-  --popover-foreground: 213 31% 91%;
-  --popover-border: 216 34% 17%;
+  --popover: 0 0% 6%;
+  --popover-foreground: 0 0% 92%;
+  --popover-border: 0 20% 14%;
 
-  /* Primary is a neon cyan/blue for terminal feel */
-  --primary: 191 97% 65%;
-  --primary-foreground: 222.2 47.4% 11.2%;
+  /* Primary is emergency red */
+  --primary: 0 88% 55%;
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 215 27.9% 16.9%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 0 15% 13%;
+  --secondary-foreground: 0 0% 92%;
   
-  --muted: 215 27.9% 16.9%;
-  --muted-foreground: 215 20.2% 65.1%;
+  --muted: 0 15% 13%;
+  --muted-foreground: 0 8% 58%;
   
-  --accent: 215 27.9% 16.9%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 0 15% 13%;
+  --accent-foreground: 0 0% 92%;
   
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 98%;
 
-  --input: 216 34% 17%;
-  --ring: 191 97% 65%;
+  --input: 0 20% 14%;
+  --ring: 0 88% 55%;
 
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  --chart-1: 0 88% 55%;
+  --chart-2: 0 60% 40%;
+  --chart-3: 20 80% 55%;
+  --chart-4: 340 70% 60%;
+  --chart-5: 15 75% 50%;
 }
 
 @layer base {
