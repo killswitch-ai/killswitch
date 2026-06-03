@@ -17,6 +17,18 @@ interface RateEntry {
 
 const rateMap = new Map<string, RateEntry>();
 
+const SCAN_TIMEOUT_MS = 5_000;
+const RATE_PRUNE_INTERVAL_MS = 5 * 60_000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateMap) {
+    if (now - entry.windowStart > RATE_WINDOW_MS) {
+      rateMap.delete(ip);
+    }
+  }
+}, RATE_PRUNE_INTERVAL_MS).unref();
+
 function getClientIp(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
   if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
@@ -86,35 +98,60 @@ router.post("/demo/scan", async (req: Request, res: Response): Promise<void> => 
 
   const text = body.text;
 
-  const findings = await new Promise<Finding[]>((resolve, reject) => {
-    const proc = spawn("python3", [HELPER_SCRIPT], {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env },
+  let findings: Finding[];
+  try {
+    findings = await new Promise<Finding[]>((resolve, reject) => {
+      const proc = spawn("python3", [HELPER_SCRIPT], {
+        stdio: ["pipe", "pipe", "pipe"],
+        env: { ...process.env },
+      });
+
+      let stdout = "";
+      let stderr = "";
+      let settled = false;
+
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        proc.kill("SIGKILL");
+        reject(Object.assign(new Error("Scan timed out"), { code: "SCAN_TIMEOUT" }));
+      }, SCAN_TIMEOUT_MS);
+
+      proc.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+      proc.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+
+      proc.on("close", (code) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (code !== 0) {
+          reject(new Error(`Scanner exited with code ${code}: ${stderr.slice(0, 200)}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(stdout) as Finding[]);
+        } catch {
+          reject(new Error("Failed to parse scanner output"));
+        }
+      });
+
+      proc.on("error", (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      });
+
+      proc.stdin.write(text, "utf8");
+      proc.stdin.end();
     });
-
-    let stdout = "";
-    let stderr = "";
-
-    proc.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-    proc.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-
-    proc.on("close", (code) => {
-      if (code !== 0) {
-        reject(new Error(`Scanner exited with code ${code}: ${stderr.slice(0, 200)}`));
-        return;
-      }
-      try {
-        resolve(JSON.parse(stdout) as Finding[]);
-      } catch {
-        reject(new Error("Failed to parse scanner output"));
-      }
-    });
-
-    proc.on("error", reject);
-
-    proc.stdin.write(text, "utf8");
-    proc.stdin.end();
-  });
+  } catch (err: unknown) {
+    if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === "SCAN_TIMEOUT") {
+      res.status(504).json({ error: "Scan timed out after 5 seconds. Please try a shorter input." });
+      return;
+    }
+    throw err;
+  }
 
   res.json({
     findings,
