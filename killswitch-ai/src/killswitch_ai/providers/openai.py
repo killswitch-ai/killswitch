@@ -16,6 +16,23 @@ def _guard_payload(
     operation: str,
     cfg: Config,
 ) -> tuple[str, dict]:
+    from .. import verbose as _v
+
+    _v.v1(f"Intercepting openai / {operation}")
+    if _v.is_super():
+        _v.sep("═")
+        _v.v2(f"killswitch-ai is about to scan this request to openai / {operation}")
+        _v.v2(f"  Active mode : {cfg.mode.upper()}")
+        cfg_label = str(cfg._source_path) if cfg._source_path else "defaults (no killswitch.yml found)"
+        _v.v2(f"  Config file : {cfg_label}")
+        _v.blank()
+        _v.v2(f"  What killswitch does:")
+        _v.v2(f"    It extracts every piece of text from your payload — messages,")
+        _v.v2(f"    system prompts, tool arguments — and scans each one for secrets,")
+        _v.v2(f"    API keys, passwords, and other sensitive content BEFORE the")
+        _v.v2(f"    network request is made. Nothing reaches OpenAI until it's clean.")
+        _v.blank()
+
     if operation == "responses.create":
         units = normalize_openai_responses(payload)
     else:
@@ -89,6 +106,11 @@ def _guard_payload(
         )
     except Exception:
         pass
+
+    from .. import verbose as _v
+    if _v.is_super():
+        _v.sep("═")
+        _v.blank()
 
     return final_action, sanitized
 

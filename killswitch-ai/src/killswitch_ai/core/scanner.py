@@ -122,16 +122,25 @@ def scan_text(
     entropy_threshold: float = 4.2,
     source_file: Optional[str] = None,
 ) -> List[Finding]:
+    from .. import verbose as _v
+
     findings: List[Finding] = []
 
     if _is_dummy(text):
+        _v.v2(f"  Text looks like a placeholder/example — skipping scan.")
         return findings
 
+    # ── Step 1: known secret patterns ────────────────────────────────────────
+    _v.v2(f"  Step 1: Checking {len(SECRET_PATTERNS)} known secret patterns...")
+    _v.v2(f"          (OpenAI keys, AWS keys, GitHub tokens, Stripe keys, JWTs, etc.)")
+
     for pattern_type, severity, description, pattern in SECRET_PATTERNS:
+        found = False
         for m in pattern.finditer(text):
             matched = m.group(0)
             if _is_dummy(matched):
                 continue
+            found = True
             findings.append(Finding(
                 severity=severity,
                 category="secret_pattern",
@@ -143,7 +152,11 @@ def scan_text(
                 match_end=m.end(),
                 matched_text_preview=matched[:40] if matched else "",
             ))
+        if _v.is_super():
+            status = f"MATCH → {severity.upper()}: \"{description}\"" if found else "no match"
+            _v.v2(f"    {pattern_type:<22} ... {status}")
 
+    # ── Step 2: prohibited terms ──────────────────────────────────────────────
     prohibited = list(PROHIBITED_TERM_PATTERNS)
     if extra_prohibited_terms:
         for term in extra_prohibited_terms:
@@ -151,6 +164,11 @@ def scan_text(
                 prohibited.append(re.compile(re.escape(term), re.IGNORECASE))
             except re.error:
                 pass
+
+    custom_count = len(extra_prohibited_terms) if extra_prohibited_terms else 0
+    _v.v2(f"  Step 2: Checking prohibited terms "
+          f"({len(PROHIBITED_TERM_PATTERNS)} built-in + {custom_count} custom)...")
+    _v.v2(f"          (Words like API_KEY, SECRET_KEY, CONFIDENTIAL, or your own custom terms)")
 
     for pattern in prohibited:
         for m in pattern.finditer(text):
@@ -170,7 +188,13 @@ def scan_text(
                     match_end=m.end(),
                     matched_text_preview=matched,  # in-memory only; not written to disk
                 ))
+                if _v.is_super():
+                    _v.v2(f"    Prohibited term found: \"{matched}\"")
 
+    # ── Step 3: sensitive file references ────────────────────────────────────
+    _v.v2(f"  Step 3: Checking for sensitive file references (.env, .pem, id_rsa, etc.)...")
+
+    file_finding_added = False
     if source_file:
         for fp in SENSITIVE_FILE_PATTERNS:
             if fp.search(source_file):
@@ -182,6 +206,9 @@ def scan_text(
                     recommendation=f"Do not send content from {source_file} to an LLM.",
                     scan_path=path,
                 ))
+                file_finding_added = True
+                if _v.is_super():
+                    _v.v2(f"    Source file is sensitive: {source_file}")
                 break
 
     for fp in SENSITIVE_FILE_PATTERNS:
@@ -195,32 +222,59 @@ def scan_text(
                     recommendation="Avoid including file paths for sensitive files in LLM prompts.",
                     scan_path=path,
                 ))
+                file_finding_added = True
+                if _v.is_super():
+                    _v.v2(f"    Text contains a reference to a sensitive file path.")
             break
 
+    if _v.is_super() and not file_finding_added:
+        _v.v2(f"    No sensitive file references found.")
+
+    # ── Step 4: entropy analysis ──────────────────────────────────────────────
     if entropy_enabled:
+        _v.v2(f"  Step 4: Entropy analysis — scanning for random-looking strings "
+              f"(min length: {entropy_min_length}, threshold: {entropy_threshold})...")
+        _v.v2(f"          (High entropy = looks random = might be a secret even without a known pattern)")
+
         words = re.findall(r"[A-Za-z0-9+/=_\-]{" + str(entropy_min_length) + r",}", text)
+        entropy_hits = 0
         for word in words:
             if _is_dummy(word):
                 continue
             entropy = _shannon_entropy(word)
-            if entropy >= entropy_threshold:
-                has_pattern_match = any(
-                    word in (f.matched_text_preview or "") for f in findings
-                )
-                if not has_pattern_match:
-                    findings.append(Finding(
-                        severity="low",
-                        category="entropy",
-                        finding_type="high_entropy_string",
-                        description=f"High-entropy string detected (entropy={entropy:.2f})",
-                        recommendation="Verify this is not a secret or token before sending to an LLM.",
-                        scan_path=path,
-                        # Store the full word (not truncated) so that the redactor
-                        # can do an exact substring replacement across the payload.
-                        # matched_text_preview is in-memory only; it is never
-                        # written to findings.jsonl.
-                        matched_text_preview=word,
-                    ))
+            already_matched = any(
+                word in (f.matched_text_preview or "") for f in findings
+            )
+            if _v.is_super():
+                preview = word[:24] + ("…" if len(word) > 24 else "")
+                above = entropy >= entropy_threshold
+                status = f"entropy={entropy:.2f} (threshold={entropy_threshold})"
+                if already_matched:
+                    _v.v2(f"    \"{preview}\" → {status} — already captured by pattern match, skipping")
+                elif above:
+                    _v.v2(f"    \"{preview}\" → {status} — HIGH ENTROPY → flagged")
+                else:
+                    _v.v2(f"    \"{preview}\" → {status} — below threshold, OK")
+            if entropy >= entropy_threshold and not already_matched:
+                findings.append(Finding(
+                    severity="low",
+                    category="entropy",
+                    finding_type="high_entropy_string",
+                    description=f"High-entropy string detected (entropy={entropy:.2f})",
+                    recommendation="Verify this is not a secret or token before sending to an LLM.",
+                    scan_path=path,
+                    # Store the full word (not truncated) so that the redactor
+                    # can do an exact substring replacement across the payload.
+                    # matched_text_preview is in-memory only; it is never
+                    # written to findings.jsonl.
+                    matched_text_preview=word,
+                ))
+                entropy_hits += 1
+
+        if _v.is_super() and not words:
+            _v.v2(f"    No long strings found to check for entropy.")
+    else:
+        _v.v2(f"  Step 4: Entropy analysis is disabled in your config — skipping.")
 
     return findings
 
@@ -232,8 +286,28 @@ def scan_units(
     entropy_min_length: int = 24,
     entropy_threshold: float = 4.2,
 ) -> ScanResult:
+    from .. import verbose as _v
+
     result = ScanResult(scanned_units=len(units))
-    for unit in units:
+
+    # Level-1 headline
+    _v.v1(f"Scanning {len(units)} unit(s) for secrets, API keys, and sensitive content...")
+
+    # Level-2 explanation of what "units" are
+    if _v.is_super():
+        _v.v2(f"  (A 'unit' is one piece of text — e.g. a single message, system prompt,")
+        _v.v2(f"   or tool argument. killswitch scans each unit independently.)")
+        _v.blank()
+
+    for i, unit in enumerate(units, start=1):
+        if _v.is_super():
+            _v.sep()
+            preview = unit.content[:60].replace("\n", " ")
+            ellipsis = "…" if len(unit.content) > 60 else ""
+            _v.v2(f"UNIT {i} / {len(units)}  →  path: {unit.path}  ({len(unit.content)} chars)")
+            _v.v2(f"  Preview: \"{preview}{ellipsis}\"")
+            _v.blank()
+
         findings = scan_text(
             text=unit.content,
             path=unit.path,
@@ -244,4 +318,27 @@ def scan_units(
             source_file=unit.source_file,
         )
         result.findings.extend(findings)
+
+        if _v.is_super():
+            _v.blank()
+            if findings:
+                _v.v2(f"  Unit result: {len(findings)} finding(s) — {', '.join(f.severity.upper() for f in findings)}")
+            else:
+                _v.v2(f"  Unit result: ✓ All checks passed — this unit is clean.")
+            _v.blank()
+
+    # Level-1 summary
+    if result.findings:
+        sev = result.max_severity or "unknown"
+        _v.v1(f"⚠  {len(result.findings)} finding(s) — max severity: {sev.upper()}")
+        if _v.is_super():
+            _v.sep()
+            _v.v2(f"FINDINGS SUMMARY:")
+            for idx, f in enumerate(result.findings, start=1):
+                _v.v2(f"  #{idx}  {f.finding_type:<22}  {f.severity.upper():<8}  {f.description}")
+                _v.v2(f"       Recommendation: {f.recommendation}")
+            _v.blank()
+    else:
+        _v.v1(f"✓ No issues found. The prompt looks clean.")
+
     return result

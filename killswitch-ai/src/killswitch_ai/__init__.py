@@ -18,6 +18,16 @@ Quick start::
 
     from openai import OpenAI
     client = OpenAI()  # now automatically guarded
+
+Verbose output::
+
+    # See every step killswitch takes — great for debugging or learning
+    killswitch_ai.install(verbose=1)   # key milestones
+    killswitch_ai.install(verbose=2)   # every pattern check, entropy score, decision
+
+    # Or set via environment variable (works with any usage style):
+    # KILLSWITCH_VERBOSE=1 python your_script.py
+    # KILLSWITCH_VERBOSE=2 python your_script.py
 """
 
 from __future__ import annotations
@@ -28,23 +38,48 @@ __all__ = ["install", "scan", "KillswitchBlocked"]
 from .exceptions import KillswitchBlocked
 
 
-def install(mode: str | None = None) -> None:
+def install(mode: str | None = None, verbose: int = 0) -> None:
     """
     Monkeypatch openai.OpenAI and anthropic.Anthropic so every subsequent
     instantiation is automatically guarded.
 
+    Args:
+        mode:    Override the active mode for this session.
+                 One of: "kill", "pause", "redact", "report_only".
+                 If omitted, the mode from killswitch.yml is used (default: "pause").
+        verbose: How much output to print while scanning.
+                 0 = silent (default) — only block/redact/pause notices.
+                 1 = verbose — key milestones (intercepted, N findings, decision).
+                 2 = super-verbose — every step explained in plain English.
+                 You can also set KILLSWITCH_VERBOSE=1 or =2 in the environment.
+
     Usage::
 
         import killswitch_ai
-        killswitch_ai.install()          # uses mode from killswitch.yml (or "pause")
-        killswitch_ai.install("kill")    # override mode for this session
+        killswitch_ai.install()              # uses killswitch.yml mode (or "pause")
+        killswitch_ai.install("kill")        # override mode for this session
+        killswitch_ai.install(verbose=2)     # see exactly what killswitch is doing
     """
+    from . import verbose as _verbose
     from .core.config import get_config, set_config
+
+    if verbose:
+        _verbose.set_level(verbose)
 
     cfg = get_config()
     if mode is not None:
         cfg.mode = mode
         set_config(cfg)
+
+    if _verbose.is_on():
+        cfg_label = str(cfg._source_path) if cfg._source_path else "defaults (no killswitch.yml found)"
+        _verbose.v1(f"killswitch-ai installed  mode={cfg.mode.upper()}  config={cfg_label}")
+        if _verbose.is_super():
+            _verbose.blank()
+            _verbose.v2(f"  killswitch is now active. Every call to openai.OpenAI or")
+            _verbose.v2(f"  anthropic.Anthropic will be automatically intercepted and")
+            _verbose.v2(f"  scanned before the network request is made.")
+            _verbose.blank()
 
     _patch_openai(cfg)
     _patch_anthropic(cfg)
@@ -122,9 +157,13 @@ def _patch_anthropic(cfg) -> None:
         pass
 
 
-def scan(text: str) -> "ScanResult":
+def scan(text: str, verbose: int = 0) -> "ScanResult":
     """
     Scan a string and return a ScanResult with any findings.
+
+    Args:
+        text:    The text to scan.
+        verbose: How much output to print (0=silent, 1=verbose, 2=super-verbose).
 
     Usage::
 
@@ -132,10 +171,17 @@ def scan(text: str) -> "ScanResult":
         result = killswitch_ai.scan("my API_KEY is sk-proj-abc123...")
         for finding in result.findings:
             print(finding.description)
+
+        # See every step:
+        result = killswitch_ai.scan("...", verbose=2)
     """
+    from . import verbose as _verbose
     from .core.config import get_config
     from .core.normalizer import ScanUnit
     from .core.scanner import scan_units
+
+    if verbose:
+        _verbose.set_level(verbose)
 
     cfg = get_config()
     units = [ScanUnit(path="input", content=text)]

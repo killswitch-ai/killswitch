@@ -28,9 +28,22 @@ examples:
   killswitch init
   killswitch menu
   killswitch scan "my API_KEY is sk-proj-abc123"
+  killswitch scan -v "my API_KEY is sk-proj-abc123"
+  killswitch scan --super-verbose "my text here"
   killswitch mode kill
   killswitch logs --latest
   killswitch report --send
+
+verbose output (for scan):
+  -v / --verbose        Show key steps as they happen — what was scanned, what
+                        was found, and what decision was made.
+  --super-verbose       Show every single step in plain English — each pattern
+                        checked, entropy scores, how the decision was reached.
+                        Great for beginners learning how killswitch works.
+
+  You can also set KILLSWITCH_VERBOSE=1 or KILLSWITCH_VERBOSE=2 in your
+  environment to enable verbose output for your Python scripts too:
+    KILLSWITCH_VERBOSE=2 python my_app.py
 """,
     )
     subparsers = parser.add_subparsers(dest="command")
@@ -39,9 +52,36 @@ examples:
     subparsers.add_parser("menu", help="Open the interactive menu")
     subparsers.add_parser("status", help="Show current status")
 
-    scan_p = subparsers.add_parser("scan", help="Test the scanner on text")
-    scan_p.add_argument("text", nargs="?", help="Text to scan")
+    scan_p = subparsers.add_parser(
+        "scan",
+        help="Test the scanner on text",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=(
+            "Scan a piece of text for secrets, API keys, and sensitive content.\n\n"
+            "Use -v to see what killswitch is doing step by step.\n"
+            "Use --super-verbose to see every pattern checked — great for learning."
+        ),
+    )
+    scan_p.add_argument("text", nargs="?", help="Text to scan (or omit to be prompted)")
     scan_p.add_argument("--json", action="store_true", help="Output as JSON")
+    scan_p.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help=(
+            "Show key steps as they happen: what units were scanned, "
+            "how many findings, and what decision was made."
+        ),
+    )
+    scan_p.add_argument(
+        "--super-verbose",
+        action="store_true",
+        help=(
+            "Show every single step in plain English — each of the 10 secret patterns "
+            "checked, prohibited term matching, entropy scores for every long string, "
+            "and a full explanation of how the final decision was reached. "
+            "Great for beginners who want to understand exactly how killswitch works."
+        ),
+    )
 
     mode_p = subparsers.add_parser("mode", help="Change protection mode")
     mode_p.add_argument(
@@ -143,6 +183,13 @@ def _cmd_scan(args) -> None:
     from ..core.normalizer import ScanUnit
     from ..core.scanner import scan_units
     from ..core.policy import explain_finding, resolve_action
+    from .. import verbose as _verbose
+
+    # Apply verbosity before scanning so output appears during the scan
+    if getattr(args, "super_verbose", False):
+        _verbose.set_level(2)
+    elif getattr(args, "verbose", False):
+        _verbose.set_level(1)
 
     text = args.text
     if not text:
@@ -156,6 +203,16 @@ def _cmd_scan(args) -> None:
         return
 
     cfg = get_config(reload=True)
+
+    if _verbose.is_super():
+        _verbose.sep("═")
+        _verbose.v2(f"killswitch scan — interactive scanner")
+        _verbose.v2(f"  Mode   : {cfg.mode.upper()}")
+        cfg_label = str(cfg._source_path) if cfg._source_path else "defaults (no killswitch.yml found)"
+        _verbose.v2(f"  Config : {cfg_label}")
+        _verbose.v2(f"  Input  : {len(text)} character(s)")
+        _verbose.blank()
+
     units = [ScanUnit(path="cli.scan", content=text)]
     result = scan_units(
         units,
@@ -180,7 +237,9 @@ def _cmd_scan(args) -> None:
         print(json.dumps(output, indent=2))
         return
 
-    print()
+    if _verbose.is_on():
+        print()
+
     if not result.findings:
         print("  ✓ No issues detected.")
         print("  killswitch-ai would allow this text through.\n")

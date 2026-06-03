@@ -24,22 +24,81 @@ def execute_decision(
         (final_action, sanitized_payload)
         final_action may differ from input if the user makes a choice in pause mode.
     """
+    from .. import verbose as _v
+
     if action == "allow" or not findings:
+        _v.v2("No findings — request passes through unchanged.")
         return "allow", payload
 
+    # Level-2: explain how the action was chosen
+    if _v.is_super():
+        _v.sep()
+        _v.v2("Resolving what to do...")
+        _v.v2("  killswitch checks each finding against two things:")
+        _v.v2("  1. Per-type rules in your config (e.g. 'openai_key → kill')")
+        _v.v2("  2. Your default mode (the fallback if no specific rule exists)")
+        _v.blank()
+        top = findings[0]
+        from .config import DEFAULT_ACTIONS
+        if top.finding_type in DEFAULT_ACTIONS:
+            _v.v2(f"  Per-type rule: {top.finding_type} → {DEFAULT_ACTIONS[top.finding_type]}")
+        _v.v2(f"  Resolved action: {action.upper()}")
+        _v.blank()
+
     if action == "kill":
+        top = findings[0]
+        _v.v1(f"Decision: BLOCK  "
+              f"(finding={top.finding_type}, severity={top.severity.upper()})")
+        if _v.is_super():
+            _v.v2(f"ACTION: BLOCKING this request.")
+            _v.v2(f"  → The LLM will NOT receive your message.")
+            _v.v2(f"  → A KillswitchBlocked exception is raised in your code.")
+            _v.v2(f"  → No secret value is stored in the logs.")
+            _v.v2(f"  → To handle this, wrap your call:")
+            _v.v2(f"")
+            _v.v2(f"       from killswitch_ai.exceptions import KillswitchBlocked")
+            _v.v2(f"       try:")
+            _v.v2(f"           response = client.chat.completions.create(...)")
+            _v.v2(f"       except KillswitchBlocked as e:")
+            _v.v2(f"           print('Blocked:', e)")
+            _v.blank()
         _print_block_notice(findings, event_id, provider, operation)
         raise KillswitchBlocked(findings[0], event_id)
 
     if action == "pause":
+        _v.v1(f"Decision: PAUSE  "
+              f"(finding={findings[0].finding_type}, severity={findings[0].severity.upper()})")
+        if _v.is_super():
+            _v.v2(f"ACTION: PAUSING — asking you what to do.")
+            _v.v2(f"  → Execution stops here until you respond.")
+            _v.v2(f"  → You will be shown a menu: block, redact, or allow once.")
+            _v.blank()
         return _handle_pause(payload, findings, event_id, provider, operation)
 
     if action == "redact":
+        top = findings[0]
+        _v.v1(f"Decision: REDACT  "
+              f"(finding={top.finding_type}, severity={top.severity.upper()})")
+        if _v.is_super():
+            _v.v2(f"ACTION: REDACTING sensitive content.")
+            _v.v2(f"  → The secret value is replaced with a [REDACTED_…] placeholder.")
+            _v.v2(f"  → The sanitized message IS sent to the LLM.")
+            _v.v2(f"  → The original secret is NOT stored in the logs.")
+            _v.blank()
         sanitized = redact_string_in_payload(payload, findings)
         _print_redact_notice(findings, event_id)
         return "redact", sanitized
 
     if action == "report_only":
+        top = findings[0]
+        _v.v1(f"Decision: REPORT_ONLY  "
+              f"(finding={top.finding_type}, severity={top.severity.upper()})")
+        if _v.is_super():
+            _v.v2(f"ACTION: Logging finding and allowing the request through.")
+            _v.v2(f"  → The message IS sent to the LLM as-is.")
+            _v.v2(f"  → The finding is recorded in your local log for review.")
+            _v.v2(f"  → Use 'killswitch logs' to review findings later.")
+            _v.blank()
         _print_report_notice(findings, event_id)
         return "report_only", payload
 
