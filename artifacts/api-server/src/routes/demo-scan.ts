@@ -7,6 +7,7 @@ const router: IRouter = Router();
 const HELPER_SCRIPT = path.resolve(process.cwd(), "scan_demo_helper.py");
 
 const MAX_INPUT_BYTES = 8_000;
+const MAX_OUTPUT_BYTES = 256 * 1024; // 256 KB
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_REQUESTS = 20;
 
@@ -117,7 +118,16 @@ router.post("/demo/scan", async (req: Request, res: Response): Promise<void> => 
         reject(Object.assign(new Error("Scan timed out"), { code: "SCAN_TIMEOUT" }));
       }, SCAN_TIMEOUT_MS);
 
-      proc.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+      proc.stdout.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString();
+        if (Buffer.byteLength(stdout, "utf8") > MAX_OUTPUT_BYTES) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          proc.kill("SIGKILL");
+          reject(Object.assign(new Error("Scanner output exceeded limit"), { code: "OUTPUT_TOO_LARGE" }));
+        }
+      });
       proc.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
 
       proc.on("close", (code) => {
@@ -146,8 +156,13 @@ router.post("/demo/scan", async (req: Request, res: Response): Promise<void> => 
       proc.stdin.end();
     });
   } catch (err: unknown) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException & { code?: string }).code === "SCAN_TIMEOUT") {
+    const code = (err as NodeJS.ErrnoException & { code?: string }).code;
+    if (err instanceof Error && code === "SCAN_TIMEOUT") {
       res.status(504).json({ error: "Scan timed out after 5 seconds. Please try a shorter input." });
+      return;
+    }
+    if (err instanceof Error && code === "OUTPUT_TOO_LARGE") {
+      res.status(500).json({ error: "Scanner output exceeded the allowed limit." });
       return;
     }
     throw err;
