@@ -160,12 +160,15 @@ def scan_text(
                     severity="medium",
                     category="prohibited_term",
                     finding_type="prohibited_term",
-                    description=f"Prohibited term detected: {matched}",
+                    # NOTE: description must NOT include the matched substring
+                    # because it is persisted to disk in findings.jsonl.  The
+                    # finding_type field already identifies the category.
+                    description="Prohibited term detected in prompt",
                     recommendation="Remove or replace this term before sending to an LLM.",
                     scan_path=path,
                     match_start=m.start(),
                     match_end=m.end(),
-                    matched_text_preview=matched,
+                    matched_text_preview=matched,  # in-memory only; not written to disk
                 ))
 
     if source_file:
