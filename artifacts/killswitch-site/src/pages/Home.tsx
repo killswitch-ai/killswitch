@@ -218,7 +218,7 @@ with killswitch(mode="kill"):
             <div className="max-w-3xl mx-auto text-center space-y-8">
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Ready to lock down your LLM egress?</h2>
               <p className="text-xl text-muted-foreground">
-                Install killswitch-ai today and run the configuration wizard to generate your baseline security policy.
+                Install <span className="text-primary">killswitch</span><span className="text-white"> today and run the configuration wizard to generate your baseline security policy.</span>
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <Link href="/quickstart">
