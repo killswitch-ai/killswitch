@@ -33,12 +33,13 @@ def redact_text(text: str, findings: List[Finding]) -> str:
     """
     Redact matched portions of text based on findings.
     Works from the end of the string backwards so offsets stay valid.
+    Only applies findings whose positions are within the bounds of this text.
     """
     if not findings or not text:
         return text
 
     text_findings = sorted(
-        [f for f in findings if f.match_end > f.match_start],
+        [f for f in findings if f.match_end > f.match_start and f.match_end <= len(text)],
         key=lambda f: f.match_start,
         reverse=True,
     )
@@ -56,6 +57,14 @@ def redact_string_in_payload(payload: Any, findings: List[Finding]) -> Any:
     """
     Recursively redact a payload (dict/list/str) using findings.
     Returns a deep copy — never mutates the original.
+
+    All finding types are handled:
+    - Regex-based secrets (openai_key, github_token, etc.): covered by both
+      position-based redaction AND fallback regex sweeps.
+    - Non-regex findings (prohibited_term, high_entropy_string,
+      sensitive_file_path): covered by position-based redaction via
+      ``redact_text``, which uses the match_start/match_end offsets recorded
+      during scanning.
     """
     payload = copy.deepcopy(payload)
     return _redact_obj(payload, findings)
@@ -63,9 +72,19 @@ def redact_string_in_payload(payload: Any, findings: List[Finding]) -> Any:
 
 def _redact_obj(obj: Any, findings: List[Finding]) -> Any:
     if isinstance(obj, str):
+        # Step 1: position-based redaction for ALL finding types.
+        # ``redact_text`` uses match_start/match_end recorded during scanning,
+        # so it correctly handles prohibited terms, entropy strings, and file
+        # paths — not only regex secrets.
+        result = redact_text(obj, findings)
+
+        # Step 2: regex sweep as a safety net — catches the same secret type
+        # appearing multiple times or in a different string from the one that
+        # was directly scanned (e.g. the secret is echoed in multiple fields).
         for pattern_type, _, _, pattern in SECRET_PATTERNS:
-            obj = pattern.sub(_replacement(pattern_type), obj)
-        return obj
+            result = pattern.sub(_replacement(pattern_type), result)
+
+        return result
     elif isinstance(obj, dict):
         return {k: _redact_obj(v, findings) for k, v in obj.items()}
     elif isinstance(obj, list):

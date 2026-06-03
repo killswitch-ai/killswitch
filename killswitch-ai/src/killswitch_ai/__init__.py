@@ -53,15 +53,42 @@ def install(mode: str | None = None) -> None:
 def _patch_openai(cfg) -> None:
     try:
         import openai as _openai
-        from .providers.openai import GuardedOpenAI
+        from .providers.openai import _guard_payload
 
-        _original_init = _openai.OpenAI.__init__
+        _orig_init = _openai.OpenAI.__init__
 
         def _guarded_init(self, *args, **kwargs):
-            _original_init(self, *args, **kwargs)
-            self._ks_guard = GuardedOpenAI(self, config=cfg)
-            self.responses = self._ks_guard.responses
-            self.chat = self._ks_guard.chat
+            _orig_init(self, *args, **kwargs)
+            # Capture the real objects BEFORE we overwrite instance attributes.
+            # This breaks the circular reference: the shims close over the
+            # originals, not over `self`, so no recursion is possible.
+            _orig_responses = self.responses
+            _orig_chat = self.chat
+
+            class _ResponsesShim:
+                def create(_, **kw):
+                    _, sanitized = _guard_payload(kw, "responses.create", cfg)
+                    return _orig_responses.create(**sanitized)
+
+                def __getattr__(_, name):
+                    return getattr(_orig_responses, name)
+
+            class _CompletionsShim:
+                def create(_, **kw):
+                    _, sanitized = _guard_payload(kw, "chat.completions.create", cfg)
+                    return _orig_chat.completions.create(**sanitized)
+
+                def __getattr__(_, name):
+                    return getattr(_orig_chat.completions, name)
+
+            class _ChatShim:
+                completions = _CompletionsShim()
+
+                def __getattr__(_, name):
+                    return getattr(_orig_chat, name)
+
+            self.responses = _ResponsesShim()
+            self.chat = _ChatShim()
 
         _openai.OpenAI.__init__ = _guarded_init
     except ImportError:
@@ -71,14 +98,24 @@ def _patch_openai(cfg) -> None:
 def _patch_anthropic(cfg) -> None:
     try:
         import anthropic as _anthropic
-        from .providers.anthropic import GuardedAnthropic
+        from .providers.anthropic import _guard_payload
 
-        _original_init = _anthropic.Anthropic.__init__
+        _orig_init = _anthropic.Anthropic.__init__
 
         def _guarded_init(self, *args, **kwargs):
-            _original_init(self, *args, **kwargs)
-            self._ks_guard = GuardedAnthropic(self, config=cfg)
-            self.messages = self._ks_guard.messages
+            _orig_init(self, *args, **kwargs)
+            # Capture the real messages object BEFORE replacing it.
+            _orig_messages = self.messages
+
+            class _MessagesShim:
+                def create(_, **kw):
+                    _, sanitized = _guard_payload(kw, "messages.create", cfg)
+                    return _orig_messages.create(**sanitized)
+
+                def __getattr__(_, name):
+                    return getattr(_orig_messages, name)
+
+            self.messages = _MessagesShim()
 
         _anthropic.Anthropic.__init__ = _guarded_init
     except ImportError:

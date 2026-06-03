@@ -7,7 +7,8 @@ from ..core.decision import execute_decision
 from ..core.normalizer import normalize_anthropic_messages
 from ..core.policy import resolve_action
 from ..core.scanner import scan_units
-from ..logging.logger import get_logger
+from ..exceptions import KillswitchBlocked
+from ..logging.logger import get_logger, reserve_event_id
 
 
 def _guard_payload(
@@ -28,29 +29,39 @@ def _guard_payload(
     action = resolve_action(result.findings, cfg.actions, cfg.mode)
 
     logger = get_logger(log_dir=cfg.log_dir)
-    event = logger.log_event(
-        provider="anthropic",
-        operation=operation,
-        mode=cfg.mode,
-        decision="pending" if result.has_findings else action,
-        findings=result.findings,
-    )
+    # Reserve a stable event_id up-front so it can be shown in block/pause
+    # notices before we know the final decision.
+    event_id = reserve_event_id()
 
-    final_action, sanitized = execute_decision(
-        action=action,
-        payload=payload,
-        findings=result.findings,
-        event_id=event.event_id,
-        provider="anthropic",
-        operation=operation,
-    )
+    try:
+        final_action, sanitized = execute_decision(
+            action=action,
+            payload=payload,
+            findings=result.findings,
+            event_id=event_id,
+            provider="anthropic",
+            operation=operation,
+        )
+    except KillswitchBlocked:
+        # Log the blocked outcome, then re-raise so the caller sees the exception.
+        logger.log_event(
+            provider="anthropic",
+            operation=operation,
+            mode=cfg.mode,
+            decision="blocked",
+            findings=result.findings,
+            event_id=event_id,
+        )
+        raise
 
+    # Single log entry per request with the definitive outcome.
     logger.log_event(
         provider="anthropic",
         operation=operation,
         mode=cfg.mode,
         decision=final_action,
         findings=result.findings,
+        event_id=event_id,
     )
 
     return final_action, sanitized
@@ -91,13 +102,18 @@ class GuardedAnthropic:
 
 class _GuardedMessages:
     def __init__(self, client: Any, guard: GuardedAnthropic) -> None:
+        # Capture the real messages object BEFORE any replacement so that
+        # create() delegates to the original SDK implementation without recursion.
+        self._real_messages = client.messages if hasattr(client, 'messages') else None
         self._client = client
         self._guard = guard
 
     def create(self, **kwargs: Any) -> Any:
         cfg = self._guard._get_config()
         _, sanitized = _guard_payload(kwargs, "messages.create", cfg)
-        return self._client.messages.create(**sanitized)
+        target = self._real_messages or self._client.messages
+        return target.create(**sanitized)
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._client.messages, name)
+        target = self._real_messages or self._client.messages
+        return getattr(target, name)

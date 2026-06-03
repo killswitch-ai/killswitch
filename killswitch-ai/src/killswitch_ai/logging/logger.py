@@ -22,6 +22,16 @@ def _new_event_id() -> str:
     return f"KAI-E-{now.strftime('%Y%m%d')}-{short}"
 
 
+def reserve_event_id() -> str:
+    """
+    Generate a stable event ID before the decision is known.
+    Pass this to ``execute_decision`` (for display in notices) and then to
+    ``KillswitchLogger.log_event`` so both the notice and the log record share
+    the same ID.
+    """
+    return _new_event_id()
+
+
 @dataclass
 class EventRecord:
     event_id: str = field(default_factory=_new_event_id)
@@ -89,11 +99,23 @@ class KillswitchLogger:
         mode: str,
         decision: str,
         findings: List[Finding],
+        event_id: Optional[str] = None,
     ) -> EventRecord:
+        """
+        Write one event record to the JSONL log.
+
+        Parameters
+        ----------
+        event_id:
+            Pass the ID returned by ``reserve_event_id()`` to guarantee that
+            the log entry shares the same ID shown in block/pause notices.
+            When omitted a new ID is generated.
+        """
         self._ensure_session_dir()
         self._event_count += 1
 
         event = EventRecord(
+            event_id=event_id or _new_event_id(),
             session_id=self._session_id,
             provider=provider,
             operation=operation,

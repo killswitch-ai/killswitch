@@ -41,6 +41,7 @@ MODE_DESCRIPTIONS = {
     ),
 }
 
+# (key, label, default_on)
 DATA_CATEGORIES = [
     ("api_keys",         "API keys (OpenAI, Anthropic, AWS, GitHub, Stripe, etc.)",    True),
     ("env_files",        ".env files and environment variable files",                   True),
@@ -51,6 +52,20 @@ DATA_CATEGORIES = [
     ("jwt_tokens",       "JWT tokens",                                                  False),
     ("high_entropy",     "High-entropy strings (might be secrets, might be hashes)",    False),
 ]
+
+# Maps wizard category keys → Config action overrides.
+# When a category is deselected, these finding types are set to "allow" so
+# they pass through without triggering the global mode.
+_CATEGORY_TO_FINDING_TYPES: dict[str, list[str]] = {
+    "api_keys":      ["openai_key", "anthropic_key", "aws_access_key", "github_token", "stripe_key"],
+    "env_files":     ["sensitive_file_path"],
+    "private_keys":  ["private_key"],
+    "passwords":     ["generic_password"],
+    "database_urls": ["database_url"],
+    "cloud_creds":   ["aws_secret_key"],
+    "jwt_tokens":    ["jwt_token"],
+    "high_entropy":  ["high_entropy_string"],
+}
 
 
 def _print(msg: str = "") -> None:
@@ -174,6 +189,21 @@ def run_wizard(config_path: Path | None = None) -> None:
         enabled=wants_email,
         address=email_address,
     )
+
+    # Apply category selections to the config:
+    #
+    # • high_entropy controls the entropy scanner flag.
+    # • All other categories map to specific finding types.  When a category
+    #   is deselected the corresponding action is set to "allow" so those
+    #   findings pass through without triggering the global mode.
+    cfg.entropy_enabled = "high_entropy" in selected_categories
+
+    for cat_key, finding_types in _CATEGORY_TO_FINDING_TYPES.items():
+        if cat_key == "high_entropy":
+            continue  # handled above via entropy_enabled
+        if cat_key not in selected_categories:
+            for ft in finding_types:
+                cfg.actions[ft] = "allow"
 
     save_path = config_path or (Path.cwd() / "killswitch.yml")
     save_config(cfg, save_path)
