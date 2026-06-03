@@ -71,7 +71,7 @@ export function StatsBar() {
   const isInView = useInView(ref, { once: true, margin: "-60px" });
 
   const { data: telemetry, isLoading } = useGetTelemetryStats({
-    query: { staleTime: 5 * 60 * 1000 },
+    query: { staleTime: 5 * 60 * 1000 } as any,
   });
 
   const threatsBlocked =

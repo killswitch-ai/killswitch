@@ -412,7 +412,7 @@ killswitch_ai.uninstall()`} />
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 The interactive setup wizard generates a <code className="font-mono text-sm text-primary">killswitch.yml</code> configuration file in the current directory.
               </p>
-              <CodeBlock language="bash" className="mt-4" code={`killswitch wizard`} />
+              <CodeBlock language="bash" className="mt-4" code={`killswitch init`} />
               <p className="mt-4 text-muted-foreground">The wizard walks you through four steps:</p>
               <ol className="mt-4 space-y-3 text-muted-foreground text-sm list-none">
                 {[
@@ -438,7 +438,7 @@ killswitch_ai.uninstall()`} />
               <div className="space-y-8">
                 {[
                   {
-                    cmd: "killswitch wizard",
+                    cmd: "killswitch init",
                     desc: "Run the interactive setup wizard. Generates killswitch.yml.",
                   },
                   {

@@ -55,7 +55,7 @@ export default function Quickstart() {
                 Use the interactive CLI wizard to generate your first security policy file. This will guide you through setting up default blocks and custom rules.
               </p>
               <div className="ml-12 mb-4">
-                <CodeBlock language="bash" code="killswitch wizard" />
+                <CodeBlock language="bash" code="killswitch init" />
               </div>
               <div className="ml-12 p-6 rounded-lg bg-black border border-white/10 font-mono text-sm space-y-2">
                 <div className="text-green-400">Welcome to the killswitch-ai wizard.</div>
@@ -63,7 +63,7 @@ export default function Quickstart() {
                 <div><span className="text-blue-400">?</span> Default operational mode (kill/pause/redact/report): <span className="text-white">redact</span></div>
                 <div><span className="text-blue-400">?</span> Enable high-entropy secret detection? (Y/n): <span className="text-white">Y</span></div>
                 <div><span className="text-blue-400">?</span> Enter prohibited terms (comma separated): <span className="text-white">ProjectApollo, InternalDb_Prod</span></div>
-                <div className="text-green-400 mt-4">✓ Created .killswitch.yaml</div>
+                <div className="text-green-400 mt-4">✓ Created killswitch.yml</div>
               </div>
             </section>
 

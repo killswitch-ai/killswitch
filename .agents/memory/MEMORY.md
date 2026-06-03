@@ -1,0 +1,2 @@
+- [Orval + React Query v5 types](orval-rq5-querykey.md) — orval-generated hooks type `query` as full `UseQueryOptions`, which requires `queryKey` in RQ v5; cast `as any` at call sites.
+- [api-client-react dist rebuild](api-client-react-dist.md) — package is `composite: true`, TS resolves from `dist/*.d.ts`; run `tsc --project tsconfig.json` inside `lib/api-client-react` when generated hooks change.

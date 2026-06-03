@@ -75,7 +75,7 @@ export default function WhyKillswitch() {
               <strong>killswitch-ai is the kill switch.</strong> It doesn't replace secure coding practices. It doesn't replace identity and access management. It sits precisely at the chokepoint between your Python application and the network request.
             </p>
             <p>
-              By operating as a lightweight, pip-installable library rather than a heavy enterprise proxy, it allows individual developers to secure their own code on day one, while giving platform teams the ability to enforce organization-wide policies via a shared <code>.killswitch.yaml</code>.
+              By operating as a lightweight, pip-installable library rather than a heavy enterprise proxy, it allows individual developers to secure their own code on day one, while giving platform teams the ability to enforce organization-wide policies via a shared <code>killswitch.yml</code>.
             </p>
             
             <hr className="border-white/10 my-12" />
@@ -94,7 +94,7 @@ export default function WhyKillswitch() {
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {[
                     "All scanning and detection logic",
-                    "Your .killswitch.yaml policy file",
+                    "Your killswitch.yml policy file",
                     "Incident logs (stored in .killswitch/ in your project)",
                     "Redaction and blocking decisions",
                     "The local report browser (killswitch menu)",
@@ -133,7 +133,7 @@ export default function WhyKillswitch() {
                 <div>
                   <h3 className="text-lg font-bold mb-2">Optional email reports — opt-in only</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                    During <code className="text-primary">killswitch wizard</code> setup you can opt in to a weekly summary email. This is entirely optional and off by default. If you opt in, here is the complete list of what is sent:
+                    During <code className="text-primary">killswitch init</code> setup you can opt in to a weekly summary email. This is entirely optional and off by default. If you opt in, here is the complete list of what is sent:
                   </p>
                   <ul className="space-y-1 text-sm text-muted-foreground mb-4">
                     {[
@@ -149,7 +149,7 @@ export default function WhyKillswitch() {
                     ))}
                   </ul>
                   <p className="text-muted-foreground text-sm">
-                    You can opt out at any time by running <code className="text-primary">killswitch wizard</code> again and selecting "No" at the email prompt, or by setting <code className="text-primary">telemetry_enabled: false</code> in your <code className="text-primary">.killswitch.yaml</code>.
+                    You can opt out at any time by running <code className="text-primary">killswitch init</code> again and selecting "No" at the email prompt, or by setting <code className="text-primary">email.enabled: false</code> in your <code className="text-primary">killswitch.yml</code>.
                   </p>
                 </div>
               </div>

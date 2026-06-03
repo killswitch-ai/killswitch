@@ -147,7 +147,7 @@ unsafe_context = f"Debug info: {os.environ}"
 
 # killswitch intercepts the payload before the HTTP request
 with killswitch(mode="kill"):
-    # Raises KillswitchTripped exception.
+    # Raises KillswitchBlocked exception.
     # AWS keys never hit the network.
     response = openai.chat.completions.create(
         model="gpt-4",

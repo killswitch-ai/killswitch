@@ -80,7 +80,7 @@ export default function Features() {
                     <h3 className="font-mono font-bold text-red-400 mb-2 flex items-center gap-2">
                       <ShieldBan className="h-4 w-4" /> mode="kill"
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-3">Hard block. Instantly raises a <code className="text-red-400">KillswitchTripped</code> exception and halts execution.</p>
+                    <p className="text-sm text-muted-foreground mb-3">Hard block. Instantly raises a <code className="text-red-400">KillswitchBlocked</code> exception and halts execution.</p>
                   </div>
                   
                   <div className="p-4 rounded-lg bg-yellow-950/20 border border-yellow-900/50">

@@ -98,7 +98,7 @@ const PLACEHOLDER_EVENTS: FeedEvent[] = [
 export function ActivityFeed() {
   const { data, isLoading } = useGetRecentTelemetry(
     { limit: 20 },
-    { query: { refetchInterval: 30_000, staleTime: 20_000 } }
+    { query: { refetchInterval: 30_000, staleTime: 20_000 } as any }
   );
 
   const events: FeedEvent[] =
