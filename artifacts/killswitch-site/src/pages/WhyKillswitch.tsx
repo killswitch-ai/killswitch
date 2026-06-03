@@ -72,7 +72,7 @@ export default function WhyKillswitch() {
 
             <h2>Where killswitch-ai Fits</h2>
             <p>
-              <strong>killswitch-ai is the seatbelt.</strong> It doesn't replace secure coding practices. It doesn't replace identity and access management. It sits precisely at the chokepoint between your Python application and the network request.
+              <strong>killswitch-ai is the firewall.</strong> It doesn't replace secure coding practices. It doesn't replace identity and access management. It sits precisely at the chokepoint between your Python application and the network request.
             </p>
             <p>
               By operating as a lightweight, pip-installable library rather than a heavy enterprise proxy, it allows individual developers to secure their own code on day one, while giving platform teams the ability to enforce organization-wide policies via a shared <code>.killswitch.yaml</code>.
