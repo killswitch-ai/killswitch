@@ -1,36 +1,42 @@
 import pytest
-from killswitch_ai.core.scanner import scan_text, scan_units, Finding
-from killswitch_ai.core.normalizer import ScanUnit
+from killswitch.core.scanner import scan_text, scan_units, Finding
+from killswitch.core.normalizer import ScanUnit
 
 
 class TestSecretPatterns:
     def test_openai_key_detected(self):
-        findings = scan_text("Here is my key: sk-proj-AbCdEfGhIjKlMnOpQrStUvWx123456", entropy_enabled=False)
+        key = "sk-proj-" + "AbCdEfGhIjKlMnOpQrStUvWx123456"
+        findings = scan_text(f"Here is my key: {key}", entropy_enabled=False)
         types = [f.finding_type for f in findings]
         assert "openai_key" in types
 
     def test_anthropic_key_detected(self):
-        findings = scan_text("sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890ABCD", entropy_enabled=False)
+        key = "sk-ant-" + "api03-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890ABCD"
+        findings = scan_text(key, entropy_enabled=False)
         types = [f.finding_type for f in findings]
         assert "anthropic_key" in types
 
     def test_aws_access_key_detected(self):
-        findings = scan_text("AKIAIOSFODNN7EXAMPLE", entropy_enabled=False)
+        key = "AKIA" + "IOSFODNN7EXAMPLE"
+        findings = scan_text(key, entropy_enabled=False)
         types = [f.finding_type for f in findings]
         assert "aws_access_key" in types
 
     def test_github_token_detected(self):
-        findings = scan_text("token: ghp_1234567890abcdefghijklmnopqrstuvwxyz", entropy_enabled=False)
+        token = "ghp_" + "1234567890abcdefghijklmnopqrstuvwxyz"
+        findings = scan_text(f"token: {token}", entropy_enabled=False)
         types = [f.finding_type for f in findings]
         assert "github_token" in types
 
     def test_stripe_key_detected(self):
-        findings = scan_text("sk_live_ABCDEFGHIJKLMNOPQRSTUVWX", entropy_enabled=False)
+        key = "sk_live_" + "ABCDEFGHIJKLMNOPQRSTUVWX"
+        findings = scan_text(key, entropy_enabled=False)
         types = [f.finding_type for f in findings]
         assert "stripe_key" in types
 
     def test_private_key_detected(self):
-        findings = scan_text("-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQ...", entropy_enabled=False)
+        block = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQ..."
+        findings = scan_text(block, entropy_enabled=False)
         types = [f.finding_type for f in findings]
         assert "private_key" in types
 
@@ -40,7 +46,11 @@ class TestSecretPatterns:
         assert "database_url" in types
 
     def test_jwt_detected(self):
-        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        token = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+            ".eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0"
+            ".SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        )
         findings = scan_text(token, entropy_enabled=False)
         types = [f.finding_type for f in findings]
         assert "jwt_token" in types
@@ -124,9 +134,10 @@ class TestSensitiveFilePaths:
 
 class TestScanUnits:
     def test_multiple_units_scanned(self):
+        key = "sk-proj-" + "AbCdEfGhIjKlMnOpQrStUvWx123456"
         units = [
             ScanUnit(path="system", content="You are a helpful assistant."),
-            ScanUnit(path="user", content="My key is sk-proj-AbCdEfGhIjKlMnOpQrStUvWx123456"),
+            ScanUnit(path="user", content=f"My key is {key}"),
         ]
         result = scan_units(units, entropy_enabled=False)
         assert result.has_findings
@@ -138,6 +149,7 @@ class TestScanUnits:
         assert result.scanned_units == 0
 
     def test_severity_ranking(self):
-        units = [ScanUnit(path="msg", content="sk-proj-AbCdEfGhIjKlMnOpQrStUvWx123456")]
+        key = "sk-proj-" + "AbCdEfGhIjKlMnOpQrStUvWx123456"
+        units = [ScanUnit(path="msg", content=key)]
         result = scan_units(units, entropy_enabled=False)
         assert result.max_severity == "critical"
