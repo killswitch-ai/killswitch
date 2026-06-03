@@ -8,8 +8,12 @@ export default function WhyKillswitch() {
   return (
     <div className="min-h-screen flex flex-col dark">
       <Helmet>
-        <title>Why LLM Egress Control Matters | killswitch-ai</title>
+        <title>Why LLM Egress Control Matters — killswitch-ai</title>
         <meta name="description" content="Learn about LLM egress control, prompt injection risks, and why local-first, zero-trust AI safety is critical for enterprise development." />
+        <link rel="canonical" href="https://killswitch-ai.com/why-killswitch" />
+        <meta property="og:url" content="https://killswitch-ai.com/why-killswitch" />
+        <meta property="og:title" content="Why LLM Egress Control Matters — killswitch-ai" />
+        <meta property="og:type" content="website" />
       </Helmet>
       
       <Navbar />

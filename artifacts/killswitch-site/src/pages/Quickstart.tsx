@@ -11,8 +11,12 @@ export default function Quickstart() {
   return (
     <div className="min-h-screen flex flex-col dark">
       <Helmet>
-        <title>Quickstart | killswitch-ai</title>
+        <title>Quickstart — killswitch-ai</title>
         <meta name="description" content="Get started with killswitch-ai. Step-by-step installation, configuration, and implementation guide for securing your LLM applications." />
+        <link rel="canonical" href="https://killswitch-ai.com/quickstart" />
+        <meta property="og:url" content="https://killswitch-ai.com/quickstart" />
+        <meta property="og:title" content="Quickstart — killswitch-ai" />
+        <meta property="og:type" content="website" />
       </Helmet>
       
       <Navbar />

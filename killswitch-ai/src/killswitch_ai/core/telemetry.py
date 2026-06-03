@@ -23,7 +23,7 @@ from __future__ import annotations
 import threading
 from typing import Optional
 
-_TELEMETRY_ENDPOINT = "https://killswitch-ai.replit.app/api/telemetry"
+_TELEMETRY_ENDPOINT = "https://api.killswitch-ai.com/api/telemetry"
 
 
 def send_telemetry(

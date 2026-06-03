@@ -98,6 +98,10 @@ export default function Docs() {
       <Helmet>
         <title>Documentation — killswitch-ai</title>
         <meta name="description" content="Full API reference and configuration guide for killswitch-ai, the local LLM egress control library for Python." />
+        <link rel="canonical" href="https://killswitch-ai.com/docs" />
+        <meta property="og:url" content="https://killswitch-ai.com/docs" />
+        <meta property="og:title" content="Documentation — killswitch-ai" />
+        <meta property="og:type" content="website" />
       </Helmet>
 
       <Navbar />

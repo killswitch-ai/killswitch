@@ -19,8 +19,12 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col dark bg-background selection:bg-primary/30">
       <Helmet>
-        <title>killswitch-ai | LLM Egress Control & Security</title>
+        <title>killswitch-ai — LLM Egress Control</title>
         <meta name="description" content="The seatbelt for AI-powered dev teams. Intercept, block, or redact sensitive data before it reaches external LLM APIs." />
+        <link rel="canonical" href="https://killswitch-ai.com/" />
+        <meta property="og:url" content="https://killswitch-ai.com/" />
+        <meta property="og:title" content="killswitch-ai — LLM Egress Control" />
+        <meta property="og:type" content="website" />
       </Helmet>
       
       <Navbar />

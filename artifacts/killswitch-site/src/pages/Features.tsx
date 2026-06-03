@@ -9,8 +9,12 @@ export default function Features() {
   return (
     <div className="min-h-screen flex flex-col dark">
       <Helmet>
-        <title>Features | killswitch-ai</title>
+        <title>Features — killswitch-ai</title>
         <meta name="description" content="Explore the 5 detection layers and 4 control modes of killswitch-ai. Deep-dive into how it intercepts and protects LLM API payloads." />
+        <link rel="canonical" href="https://killswitch-ai.com/features" />
+        <meta property="og:url" content="https://killswitch-ai.com/features" />
+        <meta property="og:title" content="Features — killswitch-ai" />
+        <meta property="og:type" content="website" />
       </Helmet>
       
       <Navbar />
