@@ -20,7 +20,7 @@ export function Footer() {
                 <Github className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </a>
-              <a href="https://pypi.org/project/killswitch-ai/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+              <a href="https://pypi.org/project/killswitch/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                 <Terminal className="h-5 w-5" />
                 <span className="sr-only">PyPI</span>
               </a>
