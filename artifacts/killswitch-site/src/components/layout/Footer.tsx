@@ -16,11 +16,11 @@ export function Footer() {
               The AI Kill Switch. A silent, local guardian that catches credentials and PII before they reach the cloud.
             </p>
             <div className="flex gap-4 pt-2">
-              <a href="https://github.com/j15marti/killswitch" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+              <a href="https://github.com/killswitch-ai/killswitch" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                 <Github className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </a>
-              <a href="https://pypi.org/project/killswitch/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+              <a href="https://pypi.org/project/killswitch-ai/" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                 <Terminal className="h-5 w-5" />
                 <span className="sr-only">PyPI</span>
               </a>
@@ -40,16 +40,16 @@ export function Footer() {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Resources</h4>
             <ul className="space-y-2">
-              <li><a href="https://github.com/j15marti/killswitch" className="text-sm text-muted-foreground hover:text-primary transition-colors">GitHub</a></li>
-              <li><a href="https://github.com/j15marti/killswitch/issues" className="text-sm text-muted-foreground hover:text-primary transition-colors">Report an Issue</a></li>
-              <li><a href="https://github.com/j15marti/killswitch/pulls" className="text-sm text-muted-foreground hover:text-primary transition-colors">Contribute</a></li>
+              <li><a href="https://github.com/killswitch-ai/killswitch" className="text-sm text-muted-foreground hover:text-primary transition-colors">GitHub</a></li>
+              <li><a href="https://github.com/killswitch-ai/killswitch/issues" className="text-sm text-muted-foreground hover:text-primary transition-colors">Report an Issue</a></li>
+              <li><a href="https://github.com/killswitch-ai/killswitch/pulls" className="text-sm text-muted-foreground hover:text-primary transition-colors">Contribute</a></li>
             </ul>
           </div>
         </div>
         
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} killswitch-ai. <a href="https://killswitch-ai.com" className="hover:text-primary transition-colors">killswitch-ai.com</a> — MIT License.</p>
-          <p className="font-mono">pip install killswitch</p>
+          <p className="font-mono">pip install killswitch-ai</p>
         </div>
       </div>
     </footer>

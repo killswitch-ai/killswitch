@@ -13,7 +13,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
-    navigator.clipboard.writeText("pip install killswitch");
+    navigator.clipboard.writeText("pip install killswitch-ai");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -71,7 +71,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-4">
                       <Terminal className="h-5 w-5 text-primary shrink-0" />
-                      <span className="text-foreground tracking-wide">pip install killswitch</span>
+                      <span className="text-foreground tracking-wide">pip install killswitch-ai</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground ml-6 shrink-0">
                       {copied ? (
@@ -93,7 +93,7 @@ export default function Home() {
                     Read the docs <ArrowRight className="h-3 w-3" />
                   </Link>
                   <span className="text-white/20">·</span>
-                  <a href="https://github.com/j15marti/killswitch" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors inline-flex items-center gap-1">
+                  <a href="https://github.com/killswitch-ai/killswitch" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors inline-flex items-center gap-1">
                     <Github className="h-3 w-3" /> View on GitHub
                   </a>
                 </div>
@@ -226,7 +226,7 @@ with killswitch(mode="kill"):
                     Read the Quickstart
                   </Button>
                 </Link>
-                <a href="https://github.com/j15marti/killswitch" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/killswitch-ai/killswitch" target="_blank" rel="noopener noreferrer">
                   <Button size="lg" variant="outline" className="h-[50px] px-8 bg-transparent border-white/20 hover:bg-white/5">
                     <Github className="mr-2 h-5 w-5" /> View on GitHub
                   </Button>

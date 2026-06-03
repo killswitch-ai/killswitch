@@ -151,12 +151,12 @@ export default function Docs() {
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 killswitch-ai requires Python 3.9 or later. Install from PyPI:
               </p>
-              <CodeBlock language="bash" className="mt-4" code={`pip install killswitch`} />
+              <CodeBlock language="bash" className="mt-4" code={`pip install killswitch-ai`} />
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 No cloud account, API key, or external service is required. All scanning runs in your local Python process.
               </p>
               <Callout type="tip">
-                Pin to a specific version in production: <code className="font-mono text-xs">pip install killswitch==0.1.0</code>
+                Pin to a specific version in production: <code className="font-mono text-xs">pip install killswitch-ai==0.1.3</code>
               </Callout>
             </section>
 

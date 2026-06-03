@@ -24,7 +24,7 @@ export function Navbar() {
             <Link href="/why-killswitch" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Why It Matters</Link>
             
             <div className="flex items-center gap-4 ml-4 pl-4 border-l border-white/10">
-              <a href="https://github.com/j15marti/killswitch" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+              <a href="https://github.com/killswitch-ai/killswitch" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
                 <Github className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </a>
@@ -52,12 +52,12 @@ export function Navbar() {
           <Link href="/quickstart" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Quickstart</Link>
           <Link href="/why-killswitch" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2" onClick={() => setIsOpen(false)}>Why It Matters</Link>
           <div className="pt-4 border-t border-white/10 flex flex-col gap-4">
-            <a href="https://github.com/j15marti/killswitch" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
+            <a href="https://github.com/killswitch-ai/killswitch" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
               <Github className="h-5 w-5" /> GitHub Repository
             </a>
             <Link href="/docs" className="inline-flex w-full" onClick={() => setIsOpen(false)}>
               <Button size="sm" className="w-full font-mono justify-center">
-                <Terminal className="mr-2 h-4 w-4" /> pip install killswitch
+                <Terminal className="mr-2 h-4 w-4" /> pip install killswitch-ai
               </Button>
             </Link>
           </div>

@@ -358,7 +358,7 @@ export default function Demo() {
               <Shield className="h-8 w-8 text-primary shrink-0" />
               <div className="flex-1">
                 <p className="font-mono font-semibold text-foreground">Add this protection to your codebase in 30 seconds.</p>
-                <code className="text-sm text-primary">pip install killswitch &amp;&amp; killswitch init</code>
+                <code className="text-sm text-primary">pip install killswitch-ai &amp;&amp; killswitch init</code>
               </div>
               <a href="/quickstart" className="shrink-0">
                 <Button size="sm" className="font-mono">Get started →</Button>
