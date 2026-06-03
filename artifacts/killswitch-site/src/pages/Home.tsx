@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Terminal, Shield, ArrowRight, ShieldBan, ShieldAlert, ShieldCheck, Github, Copy, Check as CheckIcon } from "lucide-react";
+import { Terminal, Shield, ArrowRight, ShieldBan, ShieldAlert, ShieldCheck, Github, Copy, Check as CheckIcon, Eye } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/Navbar";
@@ -162,7 +162,7 @@ with killswitch(mode="kill"):
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-card border border-border p-8 rounded-xl hover:border-red-500/50 transition-colors group">
                 <ShieldBan className="h-10 w-10 text-red-500 mb-6 group-hover:scale-110 transition-transform" />
                 <h3 className="text-xl font-bold font-mono mb-3">mode="kill"</h3>
@@ -184,6 +184,14 @@ with killswitch(mode="kill"):
                 <h3 className="text-xl font-bold font-mono mb-3">mode="pause"</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   Developer mode. Stops execution and prompts the CLI for manual review of the payload before allowing transmission.
+                </p>
+              </div>
+
+              <div className="bg-card border border-border p-8 rounded-xl hover:border-white/30 transition-colors group">
+                <Eye className="h-10 w-10 text-muted-foreground mb-6 group-hover:scale-110 transition-transform" />
+                <h3 className="text-xl font-bold font-mono mb-3">mode="report_only"</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Audit mode. Logs every incident locally without blocking or modifying the payload — useful for baselining before enforcing stricter policy.
                 </p>
               </div>
             </div>

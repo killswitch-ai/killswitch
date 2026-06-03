@@ -1,6 +1,6 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
-import { Shield, Lock, Globe, Server, FileWarning } from "lucide-react";
+import { Shield, Lock, Globe, Server, FileWarning, ShieldCheck, XCircle, Mail } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
@@ -78,6 +78,83 @@ export default function WhyKillswitch() {
               By operating as a lightweight, pip-installable library rather than a heavy enterprise proxy, it allows individual developers to secure their own code on day one, while giving platform teams the ability to enforce organization-wide policies via a shared <code>.killswitch.yaml</code>.
             </p>
             
+            <hr className="border-white/10 my-12" />
+
+            <h2>Privacy First — What Stays on Your Machine</h2>
+            <p>
+              killswitch-ai is designed around a simple principle: <strong>your prompts are yours</strong>. The library never phones home, never uploads payloads for analysis, and never requires an internet connection for its core protection.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8 not-prose">
+              <div className="p-6 border border-green-900/50 rounded-xl bg-green-950/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <ShieldCheck className="h-6 w-6 text-green-400" />
+                  <h3 className="text-lg font-bold text-green-400 m-0">What runs locally</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {[
+                    "All scanning and detection logic",
+                    "Your .killswitch.yaml policy file",
+                    "Incident logs (stored in .killswitch/ in your project)",
+                    "Redaction and blocking decisions",
+                    "The local report browser (killswitch menu)",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span className="text-green-400 mt-0.5">✓</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-6 border border-red-900/50 rounded-xl bg-red-950/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <XCircle className="h-6 w-6 text-red-400" />
+                  <h3 className="text-lg font-bold text-red-400 m-0">What never leaves your machine</h3>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {[
+                    "Your prompts or message content",
+                    "The actual secret values that triggered a block",
+                    "API keys or credentials",
+                    "Source code or file contents",
+                    "File system paths",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span className="text-red-400 mt-0.5">✗</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="p-6 bg-white/5 border border-white/10 rounded-xl my-8 not-prose">
+              <div className="flex items-start gap-4">
+                <Mail className="h-6 w-6 text-primary shrink-0 mt-1" />
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Optional email reports — opt-in only</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                    During <code className="text-primary">killswitch wizard</code> setup you can opt in to a weekly summary email. This is entirely optional and off by default. If you opt in, here is the complete list of what is sent:
+                  </p>
+                  <ul className="space-y-1 text-sm text-muted-foreground mb-4">
+                    {[
+                      "A hashed, anonymous install ID (not tied to your identity or machine)",
+                      "A hashed project ID (a hash of your project directory name — not the path)",
+                      "Aggregate counts: total calls intercepted, total blocks, total redactions",
+                      "The detection layer that fired (e.g., \"regex\", \"entropy\") — never the value that matched",
+                      "Your configured mode (kill / redact / pause / report_only)",
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">·</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-muted-foreground text-sm">
+                    You can opt out at any time by running <code className="text-primary">killswitch wizard</code> again and selecting "No" at the email prompt, or by setting <code className="text-primary">telemetry_enabled: false</code> in your <code className="text-primary">.killswitch.yaml</code>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-12 p-8 bg-primary/10 border border-primary/20 rounded-xl text-center not-prose">
               <Globe className="h-12 w-12 text-primary mx-auto mb-4" />
               <h3 className="text-2xl font-bold text-foreground mb-4">Secure your egress traffic today.</h3>
