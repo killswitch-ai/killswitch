@@ -57,7 +57,7 @@ export function Navbar() {
             </a>
             <Link href="/docs" className="inline-flex w-full" onClick={() => setIsOpen(false)}>
               <Button size="sm" className="w-full font-mono justify-center">
-                <Terminal className="mr-2 h-4 w-4" /> pip install killswitch-ai
+                <Terminal className="mr-2 h-4 w-4" /> pip install killswitch
               </Button>
             </Link>
           </div>

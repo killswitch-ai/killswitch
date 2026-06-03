@@ -13,7 +13,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
-    navigator.clipboard.writeText("pip install killswitch-ai");
+    navigator.clipboard.writeText("pip install killswitch");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -71,7 +71,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-4">
                       <Terminal className="h-5 w-5 text-primary shrink-0" />
-                      <span className="text-foreground tracking-wide">pip install killswitch-ai</span>
+                      <span className="text-foreground tracking-wide">pip install killswitch</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground ml-6 shrink-0">
                       {copied ? (

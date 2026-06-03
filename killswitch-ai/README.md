@@ -11,15 +11,15 @@ Everything runs locally. No prompts, responses, file contents, or secret values 
 ## Install
 
 ```bash
-pip install killswitch-ai
+pip install killswitch
 ```
 
 With provider extras:
 
 ```bash
-pip install "killswitch-ai[openai]"      # OpenAI support
-pip install "killswitch-ai[anthropic]"   # Anthropic support
-pip install "killswitch-ai[all]"         # Both
+pip install "killswitch[openai]"      # OpenAI support
+pip install "killswitch[anthropic]"   # Anthropic support
+pip install "killswitch[all]"         # Both
 ```
 
 ---

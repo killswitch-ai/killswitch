@@ -41,7 +41,7 @@ export default function Quickstart() {
                 killswitch-ai is available on PyPI. It has zero external dependencies for its core functionality.
               </p>
               <div className="ml-12">
-                <CodeBlock language="bash" code="pip install killswitch-ai" />
+                <CodeBlock language="bash" code="pip install killswitch" />
               </div>
             </section>
 

@@ -49,7 +49,7 @@ export function Footer() {
         
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} killswitch-ai. <a href="https://killswitch-ai.com" className="hover:text-primary transition-colors">killswitch-ai.com</a> — MIT License.</p>
-          <p className="font-mono">pip install killswitch-ai</p>
+          <p className="font-mono">pip install killswitch</p>
         </div>
       </div>
     </footer>
