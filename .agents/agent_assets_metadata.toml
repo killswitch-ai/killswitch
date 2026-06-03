@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "-kPcsOLFykeC2i1Qp6XZr"
+uri = "file://artifacts/killswitch-site/public/hero-bg.png"
+type = "image"
+title = "Secure data flow circuits"
