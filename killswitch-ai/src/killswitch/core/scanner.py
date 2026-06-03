@@ -121,6 +121,8 @@ def scan_text(
     entropy_min_length: int = 24,
     entropy_threshold: float = 4.2,
     source_file: Optional[str] = None,
+    allowlist: Optional[List[str]] = None,
+    disabled_finding_types: Optional[List[str]] = None,
 ) -> List[Finding]:
     from .. import verbose as _v
 
@@ -276,6 +278,21 @@ def scan_text(
     else:
         _v.v2(f"  Step 4: Entropy analysis is disabled in your config — skipping.")
 
+    # ── Post-processing: apply disabled types and allowlist ───────────────────
+    if disabled_finding_types:
+        findings = [f for f in findings if f.finding_type not in disabled_finding_types]
+
+    if allowlist:
+        def _allowlisted(f: Finding) -> bool:
+            preview = (f.matched_text_preview or "").lower()
+            desc = f.description.lower()
+            for phrase in allowlist:
+                p = phrase.lower().strip()
+                if p and (p in preview or p in desc):
+                    return True
+            return False
+        findings = [f for f in findings if not _allowlisted(f)]
+
     return findings
 
 
@@ -285,6 +302,8 @@ def scan_units(
     entropy_enabled: bool = True,
     entropy_min_length: int = 24,
     entropy_threshold: float = 4.2,
+    allowlist: Optional[List[str]] = None,
+    disabled_finding_types: Optional[List[str]] = None,
 ) -> ScanResult:
     from .. import verbose as _v
 
@@ -316,6 +335,8 @@ def scan_units(
             entropy_min_length=entropy_min_length,
             entropy_threshold=entropy_threshold,
             source_file=unit.source_file,
+            allowlist=allowlist,
+            disabled_finding_types=disabled_finding_types,
         )
         result.findings.extend(findings)
 

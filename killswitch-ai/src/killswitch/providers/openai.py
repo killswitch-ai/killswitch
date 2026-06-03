@@ -44,6 +44,8 @@ def _guard_payload(
         entropy_enabled=cfg.entropy_enabled,
         entropy_min_length=cfg.entropy_min_length,
         entropy_threshold=cfg.entropy_threshold,
+        allowlist=cfg.allowlist,
+        disabled_finding_types=cfg.disabled_finding_types,
     )
 
     action = resolve_action(result.findings, cfg.actions, cfg.mode)

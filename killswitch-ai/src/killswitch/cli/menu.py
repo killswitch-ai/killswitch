@@ -18,6 +18,49 @@ from ..logging.logger import (
 )
 
 
+FINDING_TYPES = [
+    "openai_key",
+    "anthropic_key",
+    "aws_access_key",
+    "aws_secret_key",
+    "github_token",
+    "stripe_key",
+    "private_key",
+    "jwt_token",
+    "database_url",
+    "env_file_reference",
+    "prohibited_term",
+    "sensitive_file_path",
+    "generic_password",
+    "high_entropy_string",
+]
+
+FINDING_TYPE_LABELS = {
+    "openai_key":          "OpenAI API key",
+    "anthropic_key":       "Anthropic API key",
+    "aws_access_key":      "AWS access key ID",
+    "aws_secret_key":      "AWS secret access key",
+    "github_token":        "GitHub token",
+    "stripe_key":          "Stripe API key",
+    "private_key":         "Private key (PEM block)",
+    "jwt_token":           "JWT token",
+    "database_url":        "Database URL with credentials",
+    "env_file_reference":  ".env file reference",
+    "prohibited_term":     "Prohibited term",
+    "sensitive_file_path": "Sensitive file path",
+    "generic_password":    "Password assignment",
+    "high_entropy_string": "High-entropy string",
+}
+
+_ACTION_CYCLE = ["kill", "pause", "redact", "report_only"]
+_ACTION_LABELS = {
+    "kill":        "BLOCK",
+    "pause":       "PAUSE",
+    "redact":      "REDACT",
+    "report_only": "REPORT ONLY",
+}
+
+
 def _clear() -> None:
     print("\033[H\033[J", end="")
 
@@ -83,7 +126,8 @@ def run_menu() -> None:
             "Today's summary",
             "Last 7 days summary",
             "Change protection mode",
-            "Edit what to protect",
+            "What gets blocked",
+            "What gets reported",
             "Test the scanner",
             "Email reports on/off",
             "Privacy settings",
@@ -99,14 +143,16 @@ def run_menu() -> None:
         elif choice == "4":
             _screen_change_mode(cfg)
         elif choice == "5":
-            _screen_edit_protection(cfg)
+            _screen_blocked_types(cfg)
         elif choice == "6":
-            _screen_test_scanner(cfg)
+            _screen_reported_types(cfg)
         elif choice == "7":
-            _screen_email_toggle(cfg)
+            _screen_test_scanner(cfg)
         elif choice == "8":
+            _screen_email_toggle(cfg)
+        elif choice == "9":
             _screen_privacy(cfg)
-        elif choice in ("9", "0", ""):
+        elif choice in ("10", "0", ""):
             print("\n  Goodbye!\n")
             break
 
@@ -253,6 +299,118 @@ def _screen_change_mode(cfg) -> None:
     _pause()
 
 
+def _screen_blocked_types(cfg) -> None:
+    while True:
+        _clear()
+        _header("What Gets Blocked")
+        print("  Set the action for each finding type.")
+        print(f"  Global mode fallback: {cfg.mode.upper()}")
+        print()
+        print(f"  {'#':<4} {'Finding type':<34} Action")
+        _hr()
+        for i, ft in enumerate(FINDING_TYPES, 1):
+            label = FINDING_TYPE_LABELS.get(ft, ft)
+            action = cfg.actions.get(ft, cfg.mode)
+            action_label = _ACTION_LABELS.get(action, action.upper())
+            print(f"  {i:<4} {label:<34} [{action_label}]")
+        print()
+        print("  Type a number to cycle its action:")
+        print("  BLOCK → PAUSE → REDACT → REPORT ONLY → BLOCK")
+        print("  Press Enter to go back.")
+        print()
+        try:
+            raw = input("  Choice: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return
+        if not raw:
+            return
+        try:
+            idx = int(raw) - 1
+            ft = FINDING_TYPES[idx]
+        except (ValueError, IndexError):
+            continue
+        current = cfg.actions.get(ft, cfg.mode)
+        try:
+            next_idx = (_ACTION_CYCLE.index(current) + 1) % len(_ACTION_CYCLE)
+        except ValueError:
+            next_idx = 0
+        cfg.actions[ft] = _ACTION_CYCLE[next_idx]
+        save_config(cfg)
+        new_label = _ACTION_LABELS[cfg.actions[ft]]
+        print(f"\n  ✓ {FINDING_TYPE_LABELS.get(ft, ft)} → [{new_label}]")
+
+
+def _screen_reported_types(cfg) -> None:
+    while True:
+        _clear()
+        _header("What Gets Reported")
+        print("  Toggle finding types ON/OFF.")
+        print("  OFF = completely ignored — no block, no log, no alert.")
+        print()
+        print(f"  {'#':<4} {'Finding type':<34} Reporting")
+        _hr()
+        for i, ft in enumerate(FINDING_TYPES, 1):
+            label = FINDING_TYPE_LABELS.get(ft, ft)
+            status = "OFF" if ft in cfg.disabled_finding_types else "ON"
+            print(f"  {i:<4} {label:<34} [{status}]")
+        print()
+        _hr()
+        print()
+        print("  Allowlisted phrases (always allowed through, even if they match a pattern):")
+        print()
+        if cfg.allowlist:
+            for j, phrase in enumerate(cfg.allowlist, 1):
+                print(f"  a{j}  {phrase}")
+        else:
+            print("  (none — add one with \"a\")")
+        print()
+        print("  Enter a number to toggle ON/OFF")
+        print("  \"a\" to add an allowlisted phrase")
+        print("  \"r<n>\" to remove an allowlisted phrase (e.g. r1)")
+        print("  Enter to go back.")
+        print()
+        try:
+            raw = input("  Choice: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return
+        if not raw:
+            return
+        if raw.lower() == "a":
+            try:
+                phrase = input("  Phrase to allowlist: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                continue
+            if phrase and phrase not in cfg.allowlist:
+                cfg.allowlist.append(phrase)
+                save_config(cfg)
+                print(f'\n  ✓ Added: "{phrase}"')
+            elif phrase:
+                print("\n  Already in the allowlist.")
+        elif raw.lower().startswith("r"):
+            num_str = raw[1:].strip()
+            try:
+                ridx = int(num_str) - 1
+                removed = cfg.allowlist.pop(ridx)
+                save_config(cfg)
+                print(f'\n  ✓ Removed: "{removed}"')
+            except (ValueError, IndexError):
+                print("\n  Invalid number.")
+        else:
+            try:
+                idx = int(raw) - 1
+                ft = FINDING_TYPES[idx]
+            except (ValueError, IndexError):
+                continue
+            if ft in cfg.disabled_finding_types:
+                cfg.disabled_finding_types.remove(ft)
+                status = "ON"
+            else:
+                cfg.disabled_finding_types.append(ft)
+                status = "OFF"
+            save_config(cfg)
+            print(f"\n  ✓ {FINDING_TYPE_LABELS.get(ft, ft)} → [{status}]")
+
+
 def _screen_edit_protection(cfg) -> None:
     _clear()
     _header("Edit What to Protect")
@@ -323,6 +481,8 @@ def _screen_test_scanner(cfg) -> None:
         entropy_enabled=cfg.entropy_enabled,
         entropy_min_length=cfg.entropy_min_length,
         entropy_threshold=cfg.entropy_threshold,
+        allowlist=cfg.allowlist,
+        disabled_finding_types=cfg.disabled_finding_types,
     )
 
     print()

@@ -61,6 +61,8 @@ class EmailConfig:
 class Config:
     mode: str = "pause"
     prohibited_terms: List[str] = field(default_factory=lambda: list(DEFAULT_PROHIBITED_TERMS))
+    allowlist: List[str] = field(default_factory=list)
+    disabled_finding_types: List[str] = field(default_factory=list)
     actions: Dict[str, str] = field(default_factory=lambda: dict(DEFAULT_ACTIONS))
     log_enabled: bool = True
     log_dir: str = ".killswitch"
@@ -84,6 +86,8 @@ class Config:
             "mode": {"default_action": self.mode},
             "detection": {
                 "prohibited_terms": self.prohibited_terms,
+                "allowlist": self.allowlist,
+                "disabled_finding_types": self.disabled_finding_types,
                 "entropy_detection": {
                     "enabled": self.entropy_enabled,
                     "min_length": self.entropy_min_length,
@@ -154,6 +158,10 @@ def load_config(path: Optional[Path] = None) -> Config:
     detection = data.get("detection", {})
     if "prohibited_terms" in detection:
         cfg.prohibited_terms = list(detection["prohibited_terms"])
+    if "allowlist" in detection:
+        cfg.allowlist = list(detection["allowlist"])
+    if "disabled_finding_types" in detection:
+        cfg.disabled_finding_types = list(detection["disabled_finding_types"])
     entropy = detection.get("entropy_detection", {})
     cfg.entropy_enabled = entropy.get("enabled", cfg.entropy_enabled)
     cfg.entropy_min_length = entropy.get("min_length", cfg.entropy_min_length)
