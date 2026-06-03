@@ -8,7 +8,10 @@
 
 export * from './countMap';
 export * from './errorResponse';
+export * from './getRecentTelemetryParams';
 export * from './healthStatus';
+export * from './recentTelemetryEvent';
+export * from './recentTelemetryFeed';
 export * from './telemetryRecord';
 export * from './telemetryRecordAgents';
 export * from './telemetryRecordFindingTypes';

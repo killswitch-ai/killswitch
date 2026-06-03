@@ -21,7 +21,9 @@ import type {
 
 import type {
   ErrorResponse,
+  GetRecentTelemetryParams,
   HealthStatus,
+  RecentTelemetryFeed,
   TelemetryRecord,
   TelemetryReport,
   TelemetryStats
@@ -105,6 +107,90 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRecentTelemetryUrl = (params?: GetRecentTelemetryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/telemetry/recent?${stringifiedParams}` : `/api/telemetry/recent`
+}
+
+/**
+ * @summary Get recent anonymized threat detections
+ */
+export const getRecentTelemetry = async (params?: GetRecentTelemetryParams, options?: RequestInit): Promise<RecentTelemetryFeed> => {
+
+  return customFetch<RecentTelemetryFeed>(getGetRecentTelemetryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRecentTelemetryQueryKey = (params?: GetRecentTelemetryParams,) => {
+    return [
+    `/api/telemetry/recent`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetRecentTelemetryQueryOptions = <TData = Awaited<ReturnType<typeof getRecentTelemetry>>, TError = ErrorType<unknown>>(params?: GetRecentTelemetryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecentTelemetry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRecentTelemetryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRecentTelemetry>>> = ({ signal }) => getRecentTelemetry(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRecentTelemetry>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRecentTelemetryQueryResult = NonNullable<Awaited<ReturnType<typeof getRecentTelemetry>>>
+export type GetRecentTelemetryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get recent anonymized threat detections
+ */
+
+export function useGetRecentTelemetry<TData = Awaited<ReturnType<typeof getRecentTelemetry>>, TError = ErrorType<unknown>>(
+ params?: GetRecentTelemetryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecentTelemetry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRecentTelemetryQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -73,7 +73,28 @@ export interface TelemetryStats {
   top_finding_types?: TelemetryStatsTopFindingTypes;
 }
 
+export interface RecentTelemetryEvent {
+  /** Type of finding detected (e.g. aws_key, pii, generic_secret) */
+  finding_type: string;
+  /** Mode that was triggered (kill, redact, pause, report_only) */
+  mode: string;
+  reported_at: string;
+}
+
+export interface RecentTelemetryFeed {
+  events: RecentTelemetryEvent[];
+}
+
 export interface ErrorResponse {
   error: string;
 }
+
+export type GetRecentTelemetryParams = {
+/**
+ * Number of recent events to return
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};
 

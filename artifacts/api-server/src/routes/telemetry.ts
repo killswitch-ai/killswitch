@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, telemetryEventsTable, telemetrySummaryTable } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { sql, desc } from "drizzle-orm";
 import {
   SubmitTelemetryBody,
   GetTelemetryStatsResponse,
@@ -112,6 +112,48 @@ router.post("/telemetry", async (req, res): Promise<void> => {
     modes: row.modes,
     finding_types: row.findingTypes,
   });
+});
+
+router.get("/telemetry/recent", async (req, res): Promise<void> => {
+  const rawLimit = parseInt(String(req.query.limit ?? "20"), 10);
+  const limit = Math.min(Math.max(isNaN(rawLimit) ? 20 : rawLimit, 1), 50);
+
+  const rows = await db
+    .select({
+      modes: telemetryEventsTable.modes,
+      findingTypes: telemetryEventsTable.findingTypes,
+      reportedAt: telemetryEventsTable.reportedAt,
+    })
+    .from(telemetryEventsTable)
+    .where(sql`${telemetryEventsTable.findingTypes} is not null and ${telemetryEventsTable.findingTypes} != '{}'::jsonb`)
+    .orderBy(desc(telemetryEventsTable.reportedAt))
+    .limit(limit * 5);
+
+  const events: { finding_type: string; mode: string; reported_at: string }[] = [];
+
+  for (const row of rows) {
+    const findingTypes = row.findingTypes as Record<string, number> | null;
+    const modes = row.modes as Record<string, number> | null;
+
+    if (!findingTypes) continue;
+
+    const topFinding = Object.entries(findingTypes).sort((a, b) => b[1] - a[1])[0];
+    if (!topFinding) continue;
+
+    const topMode = modes
+      ? Object.entries(modes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "report_only"
+      : "report_only";
+
+    events.push({
+      finding_type: topFinding[0],
+      mode: topMode,
+      reported_at: row.reportedAt.toISOString(),
+    });
+
+    if (events.length >= limit) break;
+  }
+
+  res.json({ events });
 });
 
 router.get("/telemetry", async (_req, res): Promise<void> => {

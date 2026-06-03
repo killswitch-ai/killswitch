@@ -18,6 +18,27 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Get recent anonymized threat detections
+ */
+export const getRecentTelemetryQueryLimitDefault = 20;
+export const getRecentTelemetryQueryLimitMax = 50;
+
+
+
+export const GetRecentTelemetryQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(getRecentTelemetryQueryLimitMax).default(getRecentTelemetryQueryLimitDefault).describe('Number of recent events to return')
+})
+
+export const GetRecentTelemetryResponse = zod.object({
+  "events": zod.array(zod.object({
+  "finding_type": zod.string().describe('Type of finding detected (e.g. aws_key, pii, generic_secret)'),
+  "mode": zod.string().describe('Mode that was triggered (kill, redact, pause, report_only)'),
+  "reported_at": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary Submit anonymous usage telemetry
  */
 export const SubmitTelemetryBody = zod.object({

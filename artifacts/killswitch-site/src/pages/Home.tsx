@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { StatsBar } from "@/components/ui/StatsBar";
+import { ActivityFeed } from "@/components/ui/ActivityFeed";
 
 export default function Home() {
   const [copied, setCopied] = useState(false);
@@ -104,6 +105,9 @@ export default function Home() {
 
         {/* Stats Bar */}
         <StatsBar />
+
+        {/* Live Activity Feed */}
+        <ActivityFeed />
 
         {/* Value Prop Section */}
         <section className="py-24 bg-card/50 border-y border-white/5 relative z-10">
