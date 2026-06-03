@@ -70,6 +70,8 @@ class Config:
     entropy_min_length: int = 24
     entropy_threshold: float = 4.2
     email: EmailConfig = field(default_factory=EmailConfig)
+    telemetry_enabled: bool = False
+    telemetry_endpoint: str = ""
     install_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     project_id: str = field(default_factory=_compute_project_id)
     _source_path: Optional[Path] = field(default=None, repr=False)
@@ -103,6 +105,10 @@ class Config:
                 "smtp_port": self.email.smtp_port,
                 "smtp_user": self.email.smtp_user,
                 "from_address": self.email.from_address,
+            },
+            "telemetry": {
+                "enabled": self.telemetry_enabled,
+                "endpoint": self.telemetry_endpoint,
             },
             "meta": {
                 "install_id": self.install_id,
@@ -171,6 +177,10 @@ def load_config(path: Optional[Path] = None) -> Config:
     cfg.email.smtp_user = email_block.get("smtp_user", "")
     cfg.email.smtp_password = email_block.get("smtp_password", "")
     cfg.email.from_address = email_block.get("from_address", cfg.email.from_address)
+
+    telemetry_block = data.get("telemetry", {})
+    cfg.telemetry_enabled = telemetry_block.get("enabled", False)
+    cfg.telemetry_endpoint = telemetry_block.get("endpoint", "")
 
     meta = data.get("meta", {})
     cfg.install_id = meta.get("install_id", cfg.install_id)

@@ -149,7 +149,7 @@ def run_wizard(config_path: Path | None = None) -> None:
     _print()
     _hr()
     _print()
-    _print("  STEP 3 OF 4 — Email reports (optional)")
+    _print("  STEP 3 OF 5 — Email reports (optional)")
     _print()
     _print("  killswitch-ai can send you a weekly summary by email.")
     _print("  The summary contains ONLY anonymous counts — how many requests")
@@ -177,11 +177,41 @@ def run_wizard(config_path: Path | None = None) -> None:
         else:
             wants_email = False
 
-    # --- Step 4: Build and save config ---
+    # --- Step 4: Anonymous telemetry ---
     _print()
     _hr()
     _print()
-    _print("  STEP 4 OF 4 — Saving your configuration...")
+    _print("  STEP 4 OF 5 — Anonymous usage telemetry (optional)")
+    _print()
+    _print("  Help improve killswitch-ai by sharing anonymous usage statistics.")
+    _print("  This sends periodic aggregated counts to the killswitch-ai team:")
+    _print()
+    _print("    • Which LLM models and providers you call (model names only)")
+    _print("    • How many calls were scanned / blocked / redacted")
+    _print("    • Which finding types were triggered most often")
+    _print("    • Your Python version and OS type (macos / linux / windows)")
+    _print("    • killswitch-ai library version")
+    _print()
+    _print("  What is NEVER sent:")
+    _print("    • Prompt text or message content of any kind")
+    _print("    • Matched secret values")
+    _print("    • File paths, project names, or any identifying information")
+    _print("    • Your email address or install ID in any human-readable form")
+    _print()
+    _print("  Telemetry is off by default. You can change this anytime in")
+    _print("  killswitch.yml under the 'telemetry' key.")
+    _print()
+
+    wants_telemetry = _ask_yn("Enable anonymous telemetry?", default=False)
+    if wants_telemetry:
+        _print()
+        _print("  ✓ Anonymous telemetry enabled. Thank you!")
+
+    # --- Step 5: Build and save config ---
+    _print()
+    _hr()
+    _print()
+    _print("  STEP 5 OF 5 — Saving your configuration...")
     _print()
 
     cfg = Config(mode=mode)
@@ -189,6 +219,7 @@ def run_wizard(config_path: Path | None = None) -> None:
         enabled=wants_email,
         address=email_address,
     )
+    cfg.telemetry_enabled = wants_telemetry
 
     # Apply category selections to the config:
     #

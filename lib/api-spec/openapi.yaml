@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: telemetry
+    description: Anonymous usage telemetry
 paths:
   /healthz:
     get:
@@ -24,6 +26,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /telemetry:
+    post:
+      operationId: submitTelemetry
+      tags: [telemetry]
+      summary: Submit anonymous usage telemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelemetryReport"
+      responses:
+        "201":
+          description: Report accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelemetryRecord"
+        "400":
+          description: Invalid report body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      operationId: getTelemetryStats
+      tags: [telemetry]
+      summary: Get aggregate telemetry statistics
+      responses:
+        "200":
+          description: Aggregate stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelemetryStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +74,146 @@ components:
       required:
         - status
 
+    CountMap:
+      type: object
+      additionalProperties:
+        type: integer
+
+    TelemetryReport:
+      type: object
+      required:
+        - install_id
+        - commands_analyzed
+        - prohibited_stopped
+        - sensitive_stopped
+      properties:
+        install_id:
+          type: string
+        lib_version:
+          type: string
+          nullable: true
+        python_version:
+          type: string
+          nullable: true
+        os_type:
+          type: string
+          nullable: true
+        commands_analyzed:
+          type: integer
+        prohibited_stopped:
+          type: integer
+        sensitive_stopped:
+          type: integer
+        agents:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        providers:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        modes:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        finding_types:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+
+    TelemetryRecord:
+      type: object
+      required:
+        - id
+        - install_id
+        - reported_at
+        - commands_analyzed
+        - prohibited_stopped
+        - sensitive_stopped
+      properties:
+        id:
+          type: integer
+        install_id:
+          type: string
+        reported_at:
+          type: string
+          format: date-time
+        lib_version:
+          type: string
+          nullable: true
+        python_version:
+          type: string
+          nullable: true
+        os_type:
+          type: string
+          nullable: true
+        commands_analyzed:
+          type: integer
+        prohibited_stopped:
+          type: integer
+        sensitive_stopped:
+          type: integer
+        agents:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        providers:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        modes:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        finding_types:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+
+    TelemetryStats:
+      type: object
+      required:
+        - total_reports
+        - total_commands_analyzed
+        - total_prohibited_stopped
+        - total_sensitive_stopped
+      properties:
+        total_reports:
+          type: integer
+        total_commands_analyzed:
+          type: integer
+        total_prohibited_stopped:
+          type: integer
+        total_sensitive_stopped:
+          type: integer
+        top_agents:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        top_providers:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+        top_finding_types:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

@@ -52,6 +52,17 @@ def _guard_payload(
             findings=result.findings,
             event_id=event_id,
         )
+        try:
+            from ..core.stats import record_call
+            record_call(
+                provider="anthropic",
+                model=payload.get("model"),
+                mode=cfg.mode,
+                decision="blocked",
+                finding_types=[f.finding_type for f in result.findings],
+            )
+        except Exception:
+            pass
         raise
 
     # Single log entry per request with the definitive outcome.
@@ -63,6 +74,18 @@ def _guard_payload(
         findings=result.findings,
         event_id=event_id,
     )
+
+    try:
+        from ..core.stats import record_call
+        record_call(
+            provider="anthropic",
+            model=payload.get("model"),
+            mode=cfg.mode,
+            decision=final_action,
+            finding_types=[f.finding_type for f in result.findings],
+        )
+    except Exception:
+        pass
 
     return final_action, sanitized
 
