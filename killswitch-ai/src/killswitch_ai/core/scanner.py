@@ -215,7 +215,11 @@ def scan_text(
                         description=f"High-entropy string detected (entropy={entropy:.2f})",
                         recommendation="Verify this is not a secret or token before sending to an LLM.",
                         scan_path=path,
-                        matched_text_preview=word[:20] + "..." if len(word) > 20 else word,
+                        # Store the full word (not truncated) so that the redactor
+                        # can do an exact substring replacement across the payload.
+                        # matched_text_preview is in-memory only; it is never
+                        # written to findings.jsonl.
+                        matched_text_preview=word,
                     ))
 
     return findings

@@ -182,7 +182,7 @@ class TestGuardedAnthropicWrapper:
 # ---------------------------------------------------------------------------
 
 class TestRedactAllFindingTypes:
-    def _make_finding_at(self, finding_type, start, end, severity="medium"):
+    def _make_finding_at(self, finding_type, start, end, severity="medium", matched_text_preview=""):
         return Finding(
             severity=severity,
             category="test",
@@ -191,6 +191,7 @@ class TestRedactAllFindingTypes:
             scan_path="input",
             match_start=start,
             match_end=end,
+            matched_text_preview=matched_text_preview,
         )
 
     def test_redact_covers_prohibited_term_finding(self):
@@ -223,7 +224,10 @@ class TestRedactAllFindingTypes:
     def test_redact_payload_covers_non_regex_findings(self):
         from killswitch_ai.core.redactor import redact_string_in_payload
         text = "CONFIDENTIAL data"
-        finding = self._make_finding_at("prohibited_term", 0, len("CONFIDENTIAL"))
+        finding = self._make_finding_at(
+            "prohibited_term", 0, len("CONFIDENTIAL"),
+            matched_text_preview="CONFIDENTIAL",
+        )
         result = redact_string_in_payload(text, [finding])
         assert "CONFIDENTIAL" not in result
         assert "[REDACTED_PROHIBITED]" in result
@@ -231,8 +235,10 @@ class TestRedactAllFindingTypes:
     def test_redact_payload_dict_nested(self):
         from killswitch_ai.core.redactor import redact_string_in_payload
         payload = {"messages": [{"role": "user", "content": "CONFIDENTIAL info here"}]}
-        # Finding position relative to the content string "CONFIDENTIAL info here"
-        finding = self._make_finding_at("prohibited_term", 0, len("CONFIDENTIAL"))
+        finding = self._make_finding_at(
+            "prohibited_term", 0, len("CONFIDENTIAL"),
+            matched_text_preview="CONFIDENTIAL",
+        )
         result = redact_string_in_payload(payload, [finding])
         assert "CONFIDENTIAL" not in result["messages"][0]["content"]
         assert "[REDACTED_PROHIBITED]" in result["messages"][0]["content"]

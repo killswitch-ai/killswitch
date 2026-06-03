@@ -189,6 +189,115 @@ class TestCliScanPrivacy:
                 assert "CONFIDENTIAL" not in f.description
 
 
+class TestRedactorFieldIsolation:
+    """
+    Regression tests proving that redact mode only modifies fields that
+    actually contain sensitive content, leaving model names, IDs, and other
+    metadata untouched.
+    """
+
+    def test_redact_does_not_corrupt_model_field(self):
+        """A secret in `input` must not cause `model` to be mutated."""
+        from killswitch_ai.core.redactor import redact_string_in_payload
+        from killswitch_ai.core.scanner import Finding
+
+        secret = "sk-proj-abc123xyzlongSecret99"
+        finding = Finding(
+            finding_type="openai_key",
+            severity="critical",
+            scan_path="payload.input",
+            match_start=0,
+            match_end=len(secret),
+            matched_text_preview=secret,
+        )
+        payload = {"model": "gpt-4o-mini", "input": f"My key is {secret}"}
+        result = redact_string_in_payload(payload, [finding])
+
+        assert result["model"] == "gpt-4o-mini", (
+            f"model field was corrupted: {result['model']!r}"
+        )
+        assert "[REDACTED" in result["input"]
+
+    def test_redact_does_not_corrupt_tool_name(self):
+        """A secret in message content must not mangle unrelated tool names."""
+        from killswitch_ai.core.redactor import redact_string_in_payload
+        from killswitch_ai.core.scanner import Finding
+
+        secret = "ghp_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdefg"  # 36+ chars after prefix
+        finding = Finding(
+            finding_type="github_token",
+            severity="critical",
+            scan_path="messages[0].content",
+            match_start=7,
+            match_end=7 + len(secret),
+            matched_text_preview=secret,
+        )
+        payload = {
+            "messages": [{"role": "user", "content": f"token={secret}"}],
+            "tools": [{"type": "function", "function": {"name": "list_repos"}}],
+        }
+        result = redact_string_in_payload(payload, [finding])
+
+        tool_name = result["tools"][0]["function"]["name"]
+        assert tool_name == "list_repos", (
+            f"tool name was corrupted: {tool_name!r}"
+        )
+        assert "[REDACTED" in result["messages"][0]["content"]
+
+    def test_prohibited_term_redacted_only_in_content(self):
+        """Prohibited term redaction must not touch unrelated string fields."""
+        from killswitch_ai.core.redactor import redact_string_in_payload
+        from killswitch_ai.core.scanner import Finding
+
+        finding = Finding(
+            finding_type="prohibited_term",
+            severity="medium",
+            scan_path="messages[0].content",
+            match_start=3,
+            match_end=13,
+            matched_text_preview="CONFIDENTIAL",
+        )
+        payload = {
+            "model": "claude-3-5-sonnet",
+            "messages": [{"role": "user", "content": "My CONFIDENTIAL notes"}],
+            "metadata": {"tag": "research"},
+        }
+        result = redact_string_in_payload(payload, [finding])
+
+        assert result["model"] == "claude-3-5-sonnet"
+        assert result["metadata"]["tag"] == "research"
+        assert "[REDACTED_PROHIBITED]" in result["messages"][0]["content"]
+
+    def test_clean_fields_completely_unchanged_after_redact(self):
+        """All clean fields must be byte-for-byte identical after redaction."""
+        from killswitch_ai.core.redactor import redact_string_in_payload
+        from killswitch_ai.core.scanner import Finding
+
+        secret = "sk-ant-api03-SecretValueHereLong12345"
+        finding = Finding(
+            finding_type="anthropic_key",
+            severity="critical",
+            scan_path="messages[0].content",
+            match_start=0,
+            match_end=len(secret),
+            matched_text_preview=secret,
+        )
+        payload = {
+            "model": "claude-3-opus-20240229",
+            "max_tokens": 1024,
+            "system": "You are a helpful assistant.",
+            "messages": [{"role": "user", "content": secret}],
+            "metadata": {"user_id": "u_12345", "session": "ses_abc"},
+        }
+        result = redact_string_in_payload(payload, [finding])
+
+        assert result["model"] == payload["model"]
+        assert result["max_tokens"] == payload["max_tokens"]
+        assert result["system"] == payload["system"]
+        assert result["metadata"] == payload["metadata"]
+        assert "[REDACTED" in result["messages"][0]["content"]
+
+
 class TestCliScanRecursivePayload:
     """
     Provider normalizers must recursively scan the entire payload, not just
