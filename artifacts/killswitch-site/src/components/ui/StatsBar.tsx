@@ -2,12 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { useInView } from "framer-motion";
 import { useGetTelemetryStats } from "@workspace/api-client-react";
 
-interface PyPIRecentStats {
-  last_day: number;
-  last_week: number;
-  last_month: number;
-}
-
 function useCountUp(target: number, duration = 1800, enabled = true) {
   const [count, setCount] = useState(0);
   const rafRef = useRef<number | null>(null);
@@ -19,13 +13,12 @@ function useCountUp(target: number, duration = 1800, enabled = true) {
     }
 
     const start = performance.now();
-    const from = 0;
 
     function tick(now: number) {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 4);
-      setCount(Math.round(from + (target - from) * eased));
+      setCount(Math.round(target * eased));
 
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(tick);
@@ -50,12 +43,11 @@ function formatNumber(n: number): string {
 interface StatItemProps {
   value: number;
   label: string;
-  suffix?: string;
   animate: boolean;
   loading?: boolean;
 }
 
-function StatItem({ value, label, suffix = "", animate, loading }: StatItemProps) {
+function StatItem({ value, label, animate, loading }: StatItemProps) {
   const count = useCountUp(value, 1800, animate && !loading);
 
   return (
@@ -64,10 +56,7 @@ function StatItem({ value, label, suffix = "", animate, loading }: StatItemProps
         {loading ? (
           <span className="inline-block w-20 h-10 bg-white/10 animate-pulse rounded" />
         ) : (
-          <>
-            {formatNumber(count)}
-            {suffix}
-          </>
+          formatNumber(count)
         )}
       </span>
       <span className="text-xs md:text-sm text-muted-foreground uppercase tracking-widest font-mono text-center">
@@ -81,28 +70,9 @@ export function StatsBar() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
 
-  const { data: telemetry, isLoading: telemetryLoading } = useGetTelemetryStats({
+  const { data: telemetry, isLoading } = useGetTelemetryStats({
     query: { staleTime: 5 * 60 * 1000 },
   });
-
-  const [pypi, setPypi] = useState<PyPIRecentStats | null>(null);
-  const [pypiLoading, setPypiLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/pypi-stats")
-      .then((r) => r.json())
-      .then((data: PyPIRecentStats) => {
-        if (!cancelled) setPypi(data);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setPypiLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const threatsBlocked =
     (telemetry?.total_prohibited_stopped ?? 0) +
@@ -111,30 +81,18 @@ export function StatsBar() {
   return (
     <div ref={ref} className="border-y border-white/10 bg-card/30 backdrop-blur-sm relative z-10">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
-          <StatItem
-            value={pypi?.last_week ?? 0}
-            label="PyPI downloads / week"
-            animate={isInView}
-            loading={pypiLoading}
-          />
-          <StatItem
-            value={pypi?.last_month ?? 0}
-            label="PyPI downloads / month"
-            animate={isInView}
-            loading={pypiLoading}
-          />
+        <div className="grid grid-cols-2 divide-x divide-white/10">
           <StatItem
             value={telemetry?.total_commands_analyzed ?? 0}
             label="LLM calls scanned"
             animate={isInView}
-            loading={telemetryLoading}
+            loading={isLoading}
           />
           <StatItem
             value={threatsBlocked}
             label="Threats blocked"
             animate={isInView}
-            loading={telemetryLoading}
+            loading={isLoading}
           />
         </div>
       </div>
