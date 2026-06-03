@@ -1,0 +1,600 @@
+“**Local LLM egress control**” means:
+
+```text
+Before any prompt, context, file excerpt, log, or tool output leaves the user’s machine and goes to an external LLM, killswitch-ai inspects it locally.
+```
+
+“Egress” means **data leaving the local environment**. In this case, the risk is not what the LLM says back. The risk is what the application sends out.
+
+The layered model is a way to avoid relying on one fragile method. Each layer catches a different kind of leak.
+
+# Overall flow
+
+```text
+Python app prepares prompt/context
+        ↓
+killswitch-ai intercepts payload before LLM call
+        ↓
+Layered scanner evaluates the payload locally
+        ↓
+Policy engine decides:
+allow / log / pause / redact / kill
+        ↓
+Only safe or approved payload is sent to the LLM
+```
+
+# Layer 1: Exact prohibited terms
+
+This is the simplest layer.
+
+It looks for exact words or phrases the user says should never be sent.
+
+Examples:
+
+```text
+API_KEY
+SECRET_KEY
+AWS_SECRET_ACCESS_KEY
+PRIVATE KEY
+DO_NOT_SEND_TO_AI
+CONFIDENTIAL
+PATIENT_NAME
+SOCIAL_SECURITY_NUMBER
+```
+
+Why it matters:
+
+```text
+It is easy to understand.
+It is fast.
+It catches obvious prohibited labels.
+It is user-customizable.
+```
+
+Example:
+
+```python
+prompt = "Here is my API_KEY: sk-abc..."
+```
+
+killswitch-ai sees:
+
+```text
+API_KEY
+```
+
+and triggers a finding.
+
+Limitation:
+
+```text
+A real secret may not contain the words API_KEY or SECRET_KEY.
+```
+
+So this layer is useful, but not enough.
+
+# Layer 2: Secret-pattern detection
+
+This layer uses regular expressions and known formats to detect real credentials.
+
+Examples:
+
+```text
+OpenAI-style API keys
+Anthropic API keys
+AWS access keys
+GitHub tokens
+Stripe keys
+JWTs
+private key blocks
+database URLs with passwords
+Slack tokens
+Google service account JSON
+```
+
+Example patterns:
+
+```text
+AKIA[0-9A-Z]{16}
+-----BEGIN PRIVATE KEY-----
+github_pat_
+ghp_
+sk-
+postgres://user:password@host/db
+```
+
+Example finding:
+
+```json
+{
+  "layer": "secret-pattern detection",
+  "severity": "critical",
+  "type": "possible_aws_access_key",
+  "decision": "kill",
+  "message": "Request blocked before LLM call."
+}
+```
+
+Why it matters:
+
+```text
+This catches real secrets even if they are not labeled.
+It is more reliable than keyword search.
+It is fast enough to run on every request.
+```
+
+Limitation:
+
+```text
+Some key formats are generic and can create false positives.
+Some secrets do not follow known patterns.
+```
+
+# Layer 3: Entropy-based secret detection
+
+Some secrets are just random-looking strings.
+
+Example:
+
+```text
+f92aKdj29sLxQp88vN1bTz0qM9pZx7Le
+```
+
+That may not match a known API key format, but it looks statistically unusual.
+
+Entropy detection looks for:
+
+```text
+long strings
+high randomness
+mixed uppercase/lowercase/numbers/symbols
+secret-like surrounding words
+```
+
+Example:
+
+```python
+password = "S8dj2ksPq99dLLmQ0vxZ19AqPz"
+```
+
+A keyword scanner catches `password`, but entropy scoring helps decide whether the value looks like a real secret.
+
+Why it matters:
+
+```text
+It catches custom tokens.
+It catches internal API keys.
+It catches random session secrets.
+It catches secrets from providers not in the known regex list.
+```
+
+Limitation:
+
+```text
+High-entropy strings can be harmless, such as hashes, IDs, UUIDs, or test data.
+```
+
+So this layer should usually produce:
+
+```text
+pause
+redact
+report-only
+```
+
+rather than automatic kill, unless combined with other evidence.
+
+# Layer 4: Sensitive file/path detection
+
+This layer looks at where the content came from.
+
+Certain files are inherently sensitive:
+
+```text
+.env
+.env.local
+.env.production
+*.pem
+*.key
+id_rsa
+id_ed25519
+credentials.json
+service-account.json
+.npmrc
+.pypirc
+.netrc
+kubeconfig
+~/.aws/credentials
+~/.ssh/config
+```
+
+Example:
+
+```python
+prompt = open(".env").read()
+client.responses.create(model="...", input=prompt)
+```
+
+Even before scanning the content, killswitch-ai can flag:
+
+```text
+The app is trying to send content from .env to an LLM.
+```
+
+Why it matters:
+
+```text
+File origin is often more informative than text alone.
+.env content should almost never be sent to an external LLM.
+Private key files should never be sent.
+Cloud credential files should never be sent.
+```
+
+Possible decisions:
+
+```text
+.env file content → kill
+.env.example content → pause or allow with scan
+README mentioning .env → allow or report
+```
+
+This layer is especially useful for developer tools and coding agents.
+
+# Layer 5: Structured payload scanning
+
+LLM calls are often not just plain strings. They are structured objects.
+
+Examples:
+
+```python
+messages = [
+    {"role": "system", "content": "You are helpful."},
+    {"role": "user", "content": "Summarize this log..."}
+]
+```
+
+Or:
+
+```json
+{
+  "input": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "input_text", "text": "..."},
+        {"type": "input_file", "file_id": "..."}
+      ]
+    }
+  ]
+}
+```
+
+Structured payload scanning means killswitch-ai recursively scans:
+
+```text
+system messages
+user messages
+assistant messages
+tool call arguments
+retrieved RAG chunks
+file names
+file contents, if available
+metadata
+JSON fields
+logs
+embedded code blocks
+```
+
+Why it matters:
+
+```text
+A secret may be inside a nested JSON object.
+A tool call may contain a file path.
+A RAG system may retrieve sensitive internal documents.
+A prompt may be built from multiple pieces before being sent.
+```
+
+Example:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Analyze this deployment log"
+    }
+  ],
+  "context": {
+    "env": {
+      "DATABASE_URL": "postgres://admin:password@prod-db/app"
+    }
+  }
+}
+```
+
+A plain string scanner might miss this if it only scans the top-level prompt. Structured scanning catches it.
+
+# Layer 6: Optional allowlist/context rules
+
+This layer prevents the tool from becoming annoying.
+
+Not every detection should block.
+
+Examples:
+
+```text
+"API_KEY" in documentation may be harmless.
+"sk-example" may be fake.
+".env.example" may be safe.
+"password = 'test'" in unit tests may be acceptable.
+A known internal dummy token may be allowlisted.
+```
+
+Allowlist/context rules let users define exceptions.
+
+Example config:
+
+```yaml
+allowlist:
+  terms:
+    - "your_api_key_here"
+    - "sk-example"
+    - "dummy-token"
+
+  files:
+    - ".env.example"
+    - "docs/secrets.md"
+    - "tests/fixtures/*"
+
+  contexts:
+    allow_placeholder_api_keys: true
+    allow_test_credentials: true
+    allow_documentation_examples: true
+```
+
+Why it matters:
+
+```text
+Without allowlists, the tool creates too many false alarms.
+With allowlists, it becomes usable in real projects.
+```
+
+Context rules can also make the tool stricter in production:
+
+```yaml
+profiles:
+  development:
+    default_action: pause
+
+  production:
+    default_action: kill
+    allow_test_credentials: false
+```
+
+# Layer 7: Local event logging and reports
+
+Every scan should produce a local audit event.
+
+Example event IDs:
+
+```text
+KAI-S-20260602-101422-a8f3  session
+KAI-E-20260602-000042       event
+KAI-F-20260602-000007       finding
+```
+
+Example event:
+
+```json
+{
+  "event_id": "KAI-E-20260602-000042",
+  "timestamp": "2026-06-02T10:18:05-07:00",
+  "provider": "openai",
+  "operation": "responses.create",
+  "mode": "kill",
+  "decision": "blocked",
+  "finding_ids": ["KAI-F-20260602-000007"],
+  "raw_payload_stored": false,
+  "secret_values_stored": false
+}
+```
+
+Example finding:
+
+```json
+{
+  "finding_id": "KAI-F-20260602-000007",
+  "severity": "critical",
+  "category": "secret_pattern",
+  "type": "possible_openai_api_key",
+  "decision": "blocked",
+  "recommendation": "Remove the key from the prompt and rotate it if it may have been exposed."
+}
+```
+
+Why it matters:
+
+```text
+The user can see exactly what happened.
+The user can trace the blocked event.
+The tool can generate reports.
+Teams can audit patterns over time.
+```
+
+Default privacy stance:
+
+```text
+Do not store raw prompts.
+Do not store secret values.
+Do not store full payloads.
+Do store event IDs, finding categories, decisions, and redacted summaries.
+```
+
+# How the layers work together
+
+Example input:
+
+```text
+Please debug this config:
+
+OPENAI_API_KEY=sk-proj-abc123...
+DATABASE_URL=postgres://admin:mypassword@prod-db/app
+```
+
+The layers would respond like this:
+
+| Layer                         | Detection                         |
+| ----------------------------- | --------------------------------- |
+| Exact prohibited terms        | `OPENAI_API_KEY`                  |
+| Secret-pattern detection      | `sk-proj-...`                     |
+| Entropy detection             | high-randomness token             |
+| Sensitive file/path detection | not applicable unless from `.env` |
+| Structured payload scanning   | scans all prompt fields           |
+| Allowlist/context rules       | no allowlist match                |
+| Local logging                 | event and finding created         |
+
+Decision:
+
+```text
+kill
+```
+
+Result:
+
+```text
+Request blocked.
+Nothing sent to the LLM.
+Local event logged.
+User shown finding ID and reason.
+```
+
+# Why “local LLM egress control” is the right positioning
+
+The phrase communicates three important things.
+
+## Local
+
+```text
+Scanning happens on the developer’s computer.
+Prompts do not need to be sent to your server.
+Secrets do not leave the machine for inspection.
+```
+
+This is important for trust.
+
+## LLM
+
+```text
+The tool is specifically for OpenAI, Anthropic, Claude, Gemini, local models, LangChain, LlamaIndex, and other AI workflows.
+```
+
+This is more specific than generic DLP.
+
+## Egress control
+
+```text
+The product controls what leaves the local environment.
+```
+
+This is stronger than “prompt scanner” because it describes the security boundary.
+
+Good product description:
+
+```text
+killswitch-ai is local LLM egress control for Python apps. It scans prompts, retrieved context, tool inputs, and file snippets before they are sent to an external model. If prohibited content is detected, it can block, pause, redact, or report the request.
+```
+
+# Is this better than calling it a “DLP tool”?
+
+Mostly yes.
+
+“DLP” means data loss prevention, but it sounds enterprise-heavy and generic. “Local LLM egress control” is more specific and developer-oriented.
+
+Possible positioning ladder:
+
+```text
+Simple:
+Stops secrets from being sent to LLMs.
+
+Developer:
+A local safety layer for Python LLM calls.
+
+Technical:
+Local LLM egress control for prompts, context, tool inputs, and RAG payloads.
+
+Enterprise:
+Developer-friendly data loss prevention for AI application traffic.
+```
+
+# Best first implementation
+
+Start with these layers:
+
+```text
+Layer 1: exact prohibited terms
+Layer 2: secret-pattern detection
+Layer 4: sensitive file/path detection
+Layer 5: structured payload scanning
+Layer 7: local event logging and reports
+```
+
+Then add:
+
+```text
+Layer 3: entropy detection
+Layer 6: allowlist/context rules
+```
+
+Reason:
+
+```text
+Regex and payload scanning produce immediate value.
+Entropy detection and context rules require more tuning.
+```
+
+# Best MVP behavior
+
+Default mode should be:
+
+```text
+pause
+```
+
+For a detected issue:
+
+```text
+killswitch-ai found possible sensitive content before sending this request.
+
+Finding: KAI-F-20260602-000007
+Severity: critical
+Type: possible OpenAI API key
+Decision: paused
+
+Choose:
+1. Block request
+2. Redact and continue
+3. Allow once
+4. Always allow this rule in this project
+```
+
+For production mode:
+
+```text
+kill
+```
+
+For early adoption:
+
+```text
+report-only
+```
+
+# Final product definition
+
+```text
+killswitch-ai is a pip-installable local LLM egress-control layer for Python projects.
+
+It scans prompts, messages, tool inputs, file snippets, logs, and retrieved context before they are sent to an LLM. It uses layered detection: prohibited terms, secret patterns, entropy, sensitive paths, structured payload scanning, context rules, and local event logs.
+
+When risky content is detected, killswitch-ai can block the request, pause for approval, redact the content, or log and notify. By default, scanning and logging happen locally, and no prompt, response, file content, terminal output, or secret value is uploaded.
+```

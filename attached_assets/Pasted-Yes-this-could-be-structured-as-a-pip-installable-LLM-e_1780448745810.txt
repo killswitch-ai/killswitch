@@ -1,0 +1,1094 @@
+Yes, this could be structured as a **pip-installable LLM egress-control tool**. The central idea is:
+
+```text
+Before a Python app sends text to an LLM API, killswitch-ai scans the payload.
+If prohibited content is detected, it either:
+1. blocks the request,
+2. pauses for approval,
+3. redacts and continues, or
+4. logs and notifies only.
+```
+
+This is related to agtlog, but it sits at a different layer. agtlog observes Claude Code activity and reports what happened. killswitch-ai would sit **inside the application path before data leaves the user’s machine**.
+
+OpenAI’s current Responses API creates model responses from provided text/image inputs, with optional tools, so the natural interception point is immediately before `client.responses.create(...)` or similar SDK calls. ([OpenAI][1]) Claude Code also has `PreToolUse` hooks that run after Claude creates tool parameters and before processing tool calls, with the ability to allow, deny, ask, or defer, which is useful for a Claude Code-specific version. ([Claude API Docs][2])
+
+# killswitch-ai: Local LLM Prompt Safety and Data-Leak Prevention
+
+## Product concept
+
+**killswitch-ai** is a local, pip-installable safety layer for Python projects that prevents prohibited or sensitive data from being sent to LLM APIs.
+
+It scans prompts, messages, tool inputs, retrieved context, file snippets, and structured payloads before they leave the developer’s environment. If a prohibited element is detected, killswitch-ai can block the request, pause for approval, redact the sensitive content, or simply log and notify.
+
+The first version should target Python developers using OpenAI, Anthropic, and local application code. Claude Code support can be added through hooks, and later versions can support Cursor, Codex CLI, Aider, Gemini CLI, LangChain, LlamaIndex, and LiteLLM.
+
+## Core promise
+
+```text
+killswitch-ai stops sensitive data from being sent to LLMs.
+
+Install it in a Python project, define what must never leave the machine, and choose what happens when prohibited content appears:
+kill, pause, redact, or report-only.
+```
+
+## Why this is different from agtlog
+
+```text
+agtlog = activity logging and reporting after or during Claude Code sessions.
+killswitch-ai = pre-send inspection before text is sent to an LLM.
+```
+
+agtlog answers:
+
+```text
+What did Claude Code read, change, execute, and potentially expose?
+```
+
+killswitch-ai answers:
+
+```text
+Should this prompt or context be allowed to leave the machine at all?
+```
+
+The products are complementary.
+
+## Best initial use case
+
+The strongest first use case is not general chat. It is:
+
+```text
+Python applications that send project data, user messages, logs, or documents to an LLM API.
+```
+
+Examples:
+
+```text
+developer tools
+support bots
+internal company copilots
+RAG applications
+log analysis tools
+clinical or legal summarizers
+financial analysis bots
+AI coding tools
+automated report generators
+```
+
+In these applications, the developer controls the code path. That makes pre-send scanning feasible.
+
+## Critical limitation
+
+A pip package cannot automatically intercept every LLM chat everywhere.
+
+It can protect:
+
+```text
+Python code that imports and uses killswitch-ai
+Python code using a wrapped LLM client
+Python code routed through a local proxy
+Claude Code activity if Claude hooks are installed
+LangChain or LlamaIndex pipelines if integrated
+```
+
+It cannot automatically protect:
+
+```text
+a user typing directly into ChatGPT in a browser
+a user pasting secrets into Claude.ai
+an IDE extension that bypasses the Python app
+a non-Python app that calls the LLM directly
+another process using its own network stack
+```
+
+For those cases, you would need a browser extension, local proxy, OS-level network proxy, IDE plugin, or vendor-specific hook.
+
+## Is this the best approach?
+
+The idea is good, but the best approach is **not just searching for terms like API_KEY**.
+
+A simple prohibited-term scanner will catch obvious cases, but it will miss real secrets and create false positives.
+
+Better approach:
+
+```text
+Layer 1: exact prohibited terms
+Layer 2: secret-pattern detection
+Layer 3: entropy-based secret detection
+Layer 4: sensitive file/path detection
+Layer 5: structured payload scanning
+Layer 6: optional allowlist/context rules
+Layer 7: local event logging and reports
+```
+
+The product should be marketed as:
+
+```text
+local LLM egress control
+```
+
+not merely:
+
+```text
+keyword blocker
+```
+
+## Product modes
+
+killswitch-ai should support four modes.
+
+### 1. kill mode
+
+Blocks the LLM request before it is sent.
+
+```yaml
+mode: kill
+```
+
+Behavior:
+
+```text
+If prohibited content is detected, raise KillswitchBlocked.
+No LLM API call is made.
+Log the event locally.
+Notify user if configured.
+```
+
+### 2. pause mode
+
+Pauses the request and asks the user what to do.
+
+```yaml
+mode: pause
+```
+
+Behavior:
+
+```text
+If prohibited content is detected, show the finding.
+Ask user:
+- block
+- redact and continue
+- allow once
+- allow always for this rule
+```
+
+This is good for local development but not for production servers.
+
+### 3. redact mode
+
+Redacts prohibited content and sends the cleaned payload.
+
+```yaml
+mode: redact
+```
+
+Behavior:
+
+```text
+Replace detected values with placeholders.
+Example: sk-proj-abc123... becomes [REDACTED_OPENAI_KEY]
+Send sanitized prompt.
+Log the redaction event.
+```
+
+### 4. report-only mode
+
+Allows the request but logs and notifies.
+
+```yaml
+mode: report_only
+```
+
+Behavior:
+
+```text
+LLM call proceeds.
+Finding is logged.
+Optional local notification or email report.
+```
+
+This is useful for early adoption because it does not break workflows.
+
+## Recommended default
+
+Default should be:
+
+```yaml
+mode: pause
+```
+
+But for CI or production:
+
+```yaml
+mode: kill
+```
+
+For first-time casual developers:
+
+```yaml
+mode: report_only
+```
+
+A friendly setup wizard should ask:
+
+```text
+How strict should killswitch-ai be?
+
+1. Report only: log possible leaks but do not stop requests
+2. Pause: ask before sending risky prompts
+3. Redact: remove sensitive values and continue
+4. Kill: block risky requests automatically
+
+Choose one [default: pause]:
+```
+
+## Install flow
+
+```bash
+pip install killswitch-ai
+killswitch init
+```
+
+The wizard:
+
+```text
+Welcome to killswitch-ai.
+
+This tool scans text before it is sent to an LLM.
+
+What should happen if prohibited content is detected?
+
+1. Log only
+2. Pause and ask
+3. Redact and continue
+4. Block request
+
+Choose one [default: pause]:
+
+Which data should never be sent?
+[✓] API keys
+[✓] .env files
+[✓] private keys
+[✓] passwords
+[✓] database URLs
+[✓] access tokens
+[✓] cloud credentials
+[ ] PHI / clinical text
+[ ] financial account numbers
+[ ] custom prohibited terms
+
+Enable local logs? [Y/n]
+Enable email notifications? [y/N]
+Share anonymous aggregate usage trends? [y/N]
+```
+
+## Developer usage pattern
+
+### Explicit wrapper
+
+The cleanest MVP is an explicit wrapper.
+
+```python
+from openai import OpenAI
+from killswitch_ai import Killswitch
+
+client = OpenAI()
+guard = Killswitch.from_project()
+
+prompt = "Summarize this log: ..."
+
+safe_prompt = guard.check_or_raise(prompt)
+
+response = client.responses.create(
+    model="gpt-5.4",
+    input=safe_prompt,
+)
+```
+
+OpenAI’s Responses API accepts provided text inputs to generate model output, so `guard.check_or_raise(...)` is the natural pre-send checkpoint. ([OpenAI][1])
+
+### Wrapped client
+
+Better user experience:
+
+```python
+from openai import OpenAI
+from killswitch_ai.openai import GuardedOpenAI
+
+client = GuardedOpenAI(OpenAI())
+
+response = client.responses.create(
+    model="gpt-5.4",
+    input="Please summarize this file: ..."
+)
+```
+
+The guarded client intercepts:
+
+```text
+responses.create
+chat.completions.create
+embeddings.create, optionally
+files.create, eventually
+```
+
+### Anthropic wrapper
+
+```python
+from anthropic import Anthropic
+from killswitch_ai.anthropic import GuardedAnthropic
+
+client = GuardedAnthropic(Anthropic())
+
+response = client.messages.create(
+    model="claude-sonnet-4-5",
+    max_tokens=1000,
+    messages=[
+        {"role": "user", "content": "Summarize this log..."}
+    ],
+)
+```
+
+### Universal function
+
+```python
+from killswitch_ai import scan_llm_payload
+
+finding = scan_llm_payload({
+    "messages": [
+        {"role": "user", "content": "my API_KEY is sk-..."}
+    ]
+})
+
+if finding.blocked:
+    print(finding.summary)
+```
+
+## One-line application integration
+
+For casual developers, add a simple patch mode:
+
+```python
+import killswitch_ai
+killswitch_ai.install()
+```
+
+Then the package monkeypatches common SDK methods.
+
+This is convenient but less robust. It should be optional, not the primary enterprise design.
+
+```python
+import killswitch_ai
+
+killswitch_ai.install(mode="pause")
+
+# Existing code continues unchanged
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+    model="gpt-5.4",
+    input="..."
+)
+```
+
+## Recommended architecture
+
+```text
+Python app
+  ↓
+killswitch-ai guarded client
+  ↓
+payload normalizer
+  ↓
+scanner engine
+  ↓
+policy engine
+  ↓
+decision engine
+  ↓
+redactor or blocker
+  ↓
+LLM provider SDK
+```
+
+## Core components
+
+### 1. Payload normalizer
+
+Converts provider-specific inputs into plain scan units.
+
+Input examples:
+
+```text
+OpenAI Responses input
+OpenAI Chat Completions messages
+Anthropic Messages API messages
+LangChain prompt values
+LlamaIndex retrieved nodes
+raw strings
+JSON payloads
+tool call arguments
+file upload metadata
+```
+
+Output:
+
+```json
+{
+  "provider": "openai",
+  "operation": "responses.create",
+  "scan_units": [
+    {
+      "path": "input",
+      "type": "text",
+      "content": "..."
+    }
+  ]
+}
+```
+
+### 2. Scanner engine
+
+Scans for:
+
+```text
+prohibited terms
+API key patterns
+secret-like high entropy strings
+private keys
+JWTs
+database URLs
+cloud credentials
+password assignments
+sensitive file names
+PHI/PII patterns, optional
+custom regex rules
+custom dictionaries
+```
+
+Example prohibited terms:
+
+```yaml
+prohibited_terms:
+  - "API_KEY"
+  - "SECRET_KEY"
+  - "AWS_SECRET_ACCESS_KEY"
+  - "PRIVATE KEY"
+  - "BEGIN RSA PRIVATE KEY"
+```
+
+But also add regex patterns:
+
+```yaml
+secret_patterns:
+  openai_key: "sk-[A-Za-z0-9_-]{20,}"
+  anthropic_key: "sk-ant-[A-Za-z0-9_-]{20,}"
+  aws_access_key: "AKIA[0-9A-Z]{16}"
+  private_key: "-----BEGIN (RSA|OPENSSH|EC|PRIVATE) KEY-----"
+  github_token: "gh[pousr]_[A-Za-z0-9_]{20,}"
+  database_url: "(postgres|mysql|mongodb)://[^\\s]+:[^\\s]+@"
+```
+
+### 3. Policy engine
+
+Maps findings to action.
+
+Example:
+
+```yaml
+rules:
+  - id: private_key
+    severity: critical
+    action: kill
+
+  - id: openai_key
+    severity: critical
+    action: kill
+
+  - id: env_file_reference
+    severity: high
+    action: pause
+
+  - id: api_key_literal
+    severity: medium
+    action: pause
+
+  - id: generic_password_word
+    severity: low
+    action: report_only
+```
+
+### 4. Decision engine
+
+Possible decisions:
+
+```text
+allow
+log
+notify
+pause
+redact
+kill
+```
+
+### 5. Redactor
+
+Example:
+
+```text
+Before:
+OPENAI_API_KEY=sk-proj-abc123...
+
+After:
+OPENAI_API_KEY=[REDACTED_OPENAI_KEY]
+```
+
+Redaction should preserve context without exposing the value.
+
+### 6. Local logger
+
+Every event gets an ID.
+
+```text
+KAI-S-20260602-101422-a8f3  session
+KAI-E-20260602-000042       event
+KAI-F-20260602-000007       finding
+```
+
+Example event:
+
+```json
+{
+  "event_id": "KAI-E-20260602-000042",
+  "session_id": "KAI-S-20260602-101422-a8f3",
+  "timestamp": "2026-06-02T10:18:05-07:00",
+  "provider": "openai",
+  "operation": "responses.create",
+  "mode": "kill",
+  "decision": "blocked",
+  "finding_ids": ["KAI-F-20260602-000007"],
+  "raw_payload_stored": false
+}
+```
+
+### 7. Notification layer
+
+Local notification:
+
+```text
+killswitch-ai blocked an LLM request.
+
+Finding: KAI-F-20260602-000007
+Reason: possible OpenAI API key detected
+Action: request not sent
+```
+
+Optional email metadata:
+
+```json
+{
+  "install_id": "hash",
+  "project_id": "hash",
+  "events": 12,
+  "blocked": 3,
+  "redacted": 2,
+  "critical_findings": 1,
+  "high_findings": 4
+}
+```
+
+## Configuration file
+
+```yaml
+# killswitch.yml
+
+project:
+  name: auto
+  hash_project_path: true
+
+mode:
+  default_action: pause
+  production_action: kill
+
+providers:
+  openai:
+    enabled: true
+    wrap_responses: true
+    wrap_chat_completions: true
+  anthropic:
+    enabled: true
+    wrap_messages: true
+
+detection:
+  prohibited_terms:
+    - "API_KEY"
+    - "SECRET_KEY"
+    - "PRIVATE KEY"
+    - "AWS_SECRET_ACCESS_KEY"
+
+  secret_patterns:
+    openai_key: true
+    anthropic_key: true
+    aws_keys: true
+    github_tokens: true
+    database_urls: true
+    private_keys: true
+    jwt_tokens: true
+
+  entropy_detection:
+    enabled: true
+    min_length: 24
+    threshold: 4.2
+
+actions:
+  private_key: kill
+  openai_key: kill
+  anthropic_key: kill
+  aws_secret_key: kill
+  database_url: pause
+  env_file_reference: pause
+  prohibited_term: pause
+  high_entropy_string: report_only
+
+redaction:
+  enabled: true
+  preserve_labels: true
+  replacement_format: "[REDACTED_{TYPE}]"
+
+logging:
+  enabled: true
+  local_only: true
+  store_raw_payloads: false
+  store_redacted_payloads: false
+  store_secret_values: false
+  store_hashes: true
+  retention: "1_month"
+
+notifications:
+  terminal: true
+  desktop: false
+  email:
+    enabled: false
+    frequency: weekly
+
+telemetry:
+  anonymous_usage_trends:
+    enabled: false
+    aggregate_only: true
+    send_payloads: false
+    send_prompts: false
+    send_responses: false
+    send_secrets: false
+```
+
+## Folder structure
+
+```text
+.killswitch/
+  config.yml
+  sessions/
+    2026/
+      06/
+        02/
+          KAI-S-20260602-101422-a8f3/
+            session.json
+            events.jsonl
+            findings.jsonl
+            report.md
+            report.json
+  indexes/
+    latest-session.txt
+    events.index.jsonl
+    findings.index.jsonl
+  reports/
+    latest.md
+    daily/
+    weekly/
+    monthly/
+  cache/
+  retention/
+    cleanup-log.jsonl
+```
+
+## User-facing commands
+
+```bash
+killswitch init
+killswitch menu
+killswitch status
+killswitch scan "text to scan"
+killswitch test
+killswitch logs --latest
+killswitch event KAI-E-20260602-000042
+killswitch finding KAI-F-20260602-000007
+killswitch report
+killswitch mode kill
+killswitch mode pause
+killswitch mode redact
+killswitch mode report-only
+killswitch email --on
+killswitch email --off
+killswitch telemetry --on
+killswitch telemetry --off
+```
+
+Menu:
+
+```text
+killswitch-ai
+
+1. View latest blocked request
+2. View latest findings
+3. Change mode: kill / pause / redact / report-only
+4. Edit prohibited terms
+5. Test scanner
+6. Turn email reports on or off
+7. Change log retention
+8. View privacy settings
+9. Exit
+```
+
+## Example block event
+
+Input:
+
+```python
+response = client.responses.create(
+    model="gpt-5.4",
+    input="Here is my API_KEY: sk-proj-abc123..."
+)
+```
+
+Output:
+
+```text
+killswitch-ai blocked this LLM request.
+
+Finding: KAI-F-20260602-000007
+Severity: critical
+Reason: possible OpenAI API key detected
+Decision: blocked
+Provider: openai
+Operation: responses.create
+
+The request was not sent to the LLM.
+No secret value was stored.
+```
+
+## Example pause event
+
+```text
+killswitch-ai found possible sensitive content.
+
+Finding: KAI-F-20260602-000008
+Reason: database URL detected
+Action configured: pause
+
+Choose:
+1. Block request
+2. Redact and continue
+3. Allow once
+4. Always allow this rule in this project
+```
+
+## Example no-kill report-only event
+
+```text
+killswitch-ai finding logged.
+
+Finding: KAI-F-20260602-000009
+Severity: medium
+Reason: prohibited term API_KEY appeared in prompt
+Decision: allowed because mode is report-only
+```
+
+## Claude Code integration
+
+For Claude Code, killswitch-ai should integrate through hooks rather than SDK wrapping.
+
+Claude Code `PreToolUse` hooks run before tool calls and receive tool input. They can allow, deny, ask, or defer the tool call. For killswitch-ai, this means the hook can scan `Bash`, `Read`, `Write`, `Edit`, `WebFetch`, `WebSearch`, and MCP tool inputs before Claude processes the tool call. ([Claude API Docs][2])
+
+Example setup:
+
+```bash
+killswitch init claude
+```
+
+This creates:
+
+```text
+.claude/settings.local.json
+.killswitch/config.yml
+```
+
+Hook behavior:
+
+```text
+PreToolUse receives Claude tool input
+killswitch scans the tool input
+if prohibited data detected:
+  kill mode: deny tool call
+  pause mode: ask user
+  redact mode: modify input if safe
+  report-only mode: log and allow
+```
+
+For Claude Code specifically, this is closer to your “nothing is sent to the LLM” concept, but not perfect. If Claude has already produced a tool call, the original prompt may already have gone to Claude. The hook protects **tool inputs and follow-on actions**, not the initial human message typed into Claude. For initial prompt protection, you need a Claude wrapper, local proxy, or a dedicated app where users type into killswitch-ai first.
+
+## Important architectural distinction
+
+There are two separate “send” moments:
+
+### 1. Before user prompt reaches the LLM
+
+This is true prompt egress control.
+
+Best implementations:
+
+```text
+local chat app
+local proxy
+SDK wrapper
+browser extension
+IDE plugin
+```
+
+### 2. Before Claude Code runs a tool
+
+This is agent action control.
+
+Best implementation:
+
+```text
+Claude Code PreToolUse hook
+```
+
+killswitch-ai should eventually support both.
+
+## Is “search for prohibited terms” enough?
+
+No. It is a good start but not sufficient.
+
+Problems with term-only scanning:
+
+```text
+False negatives:
+A real API key may not contain API_KEY.
+A database URL may look like a normal string.
+A private key may not be labeled clearly.
+A JWT may appear as a compact token.
+A secret can be base64-encoded.
+
+False positives:
+Documentation may mention API_KEY as a placeholder.
+README files may show fake examples.
+Tests may intentionally use dummy secrets.
+A prompt may ask how to store API_KEY safely.
+```
+
+Better detection should combine:
+
+```text
+keywords
+regex
+entropy scoring
+context labels
+file origin
+provider-specific key formats
+allowlisted dummy values
+user-defined prohibited terms
+```
+
+## Best MVP
+
+The best MVP is:
+
+```text
+pip install killswitch-ai
+killswitch init
+GuardedOpenAI wrapper
+GuardedAnthropic wrapper
+local scanner
+kill / pause / redact / report-only modes
+local logs
+basic email report opt-in
+```
+
+Do **not** start with a universal network proxy. It is harder, more brittle, and more likely to scare users.
+
+Start with explicit wrappers because they are understandable:
+
+```python
+from killswitch_ai.openai import GuardedOpenAI
+```
+
+Then add:
+
+```python
+import killswitch_ai
+killswitch_ai.install()
+```
+
+for convenience.
+
+Then add:
+
+```bash
+killswitch init claude
+```
+
+for Claude Code.
+
+## Product positioning
+
+Use:
+
+```text
+killswitch-ai prevents secrets and prohibited data from being sent to LLM APIs.
+```
+
+More complete:
+
+```text
+killswitch-ai is a local safety layer for Python projects using LLMs.
+
+It scans prompts, messages, retrieved context, tool inputs, and file snippets before they are sent to OpenAI, Anthropic, or other LLM providers. If prohibited content appears, killswitch-ai can block the request, pause for review, redact the sensitive value, or log and notify.
+
+Local-first by default. No prompts, responses, source code, terminal output, file contents, or secret values are uploaded.
+```
+
+## Recommended build order
+
+### Phase 1: Core scanner
+
+```text
+string scanner
+JSON payload scanner
+regex secret detector
+entropy detector
+redactor
+policy engine
+local logs
+```
+
+### Phase 2: OpenAI wrapper
+
+```text
+GuardedOpenAI
+responses.create
+chat.completions.create
+event logging
+blocking
+pause mode
+redact mode
+```
+
+### Phase 3: Anthropic wrapper
+
+```text
+GuardedAnthropic
+messages.create
+event logging
+blocking
+pause mode
+redact mode
+```
+
+### Phase 4: CLI and setup wizard
+
+```text
+killswitch init
+killswitch menu
+killswitch logs --latest
+killswitch report
+killswitch mode
+```
+
+### Phase 5: Claude Code hooks
+
+```text
+killswitch init claude
+PreToolUse hook
+PostToolUse logging
+report-only / kill / pause modes
+```
+
+### Phase 6: team and email reporting
+
+```text
+email reports
+anonymous aggregate telemetry
+team policies
+central dashboard
+Slack notifications
+SIEM export
+```
+
+## Frank assessment
+
+This is a stronger business than agtlog alone if positioned correctly.
+
+The reason:
+
+```text
+agtlog tells you what happened.
+killswitch-ai prevents the bad send.
+```
+
+Companies will pay more for prevention than post-hoc reporting. But the product must be very clear about what it can and cannot intercept.
+
+Best wedge:
+
+```text
+Local-first pre-send scanner for Python LLM apps.
+```
+
+Then expand:
+
+```text
+Claude Code hooks
+local proxy
+browser extension
+IDE integrations
+team policies
+```
+
+The first version should be simple, explicit, and reliable. Do not promise universal protection until you control the path between the user and the LLM.
+
+## My recommendation
+
+Build **killswitch-ai** as an **SDK wrapper first**, not as a universal background monitor.
+
+The ideal first code pattern is:
+
+```python
+from openai import OpenAI
+from killswitch_ai.openai import GuardedOpenAI
+
+client = GuardedOpenAI(OpenAI())
+
+response = client.responses.create(
+    model="gpt-5.4",
+    input="..."
+)
+```
+
+Then add a more casual developer mode:
+
+```python
+import killswitch_ai
+killswitch_ai.install()
+```
+
+That second approach can monkeypatch common SDK calls, but it will be more brittle. For a security tool, the explicit wrapper is cleaner and more defensible.
+
+## References
+
+[1] OpenAI API Reference, Responses API create endpoint, describing `POST /responses` and text inputs for generating model responses. ([OpenAI][1])
+
+[2] Anthropic Claude Code Hooks Reference, describing `PreToolUse` hooks, supported tool names, hook input fields, and decision control. ([Claude API Docs][2])
+
+[1]: https://platform.openai.com/docs/api-reference/responses/create "Create a model response | OpenAI API Reference"
+[2]: https://docs.anthropic.com/en/docs/claude-code/hooks "Hooks reference - Claude Code Docs"
