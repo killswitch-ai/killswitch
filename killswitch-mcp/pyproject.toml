@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "killswitch-mcp"
+version = "0.1.0"
+description = "MCP server for killswitch-ai — scan LLM payloads, review findings, and inspect policy from Claude Desktop, Cursor, or any MCP client"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+authors = [{ name = "Yodabyte LLC" }]
+keywords = ["mcp", "llm", "security", "openai", "anthropic", "egress", "dlp", "secrets", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "killswitch-ai>=0.1.6",
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+killswitch-mcp = "killswitch.mcp.server:serve"
+
+[project.urls]
+Homepage = "https://killswitch-ai.com/mcp"
+Documentation = "https://killswitch-ai.com/mcp"
+Repository = "https://github.com/killswitch-ai/killswitch"
+"Bug Tracker" = "https://github.com/killswitch-ai/killswitch/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/killswitch_mcp"]
