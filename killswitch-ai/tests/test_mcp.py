@@ -161,6 +161,14 @@ class TestRecentFindingsTool:
             assert "severity" in f
             assert "type" in f
             assert "description" in f
+            assert "decision" in f
+
+    def test_decision_field_present_in_schema(self):
+        from killswitch.mcp.server import _recent_findings
+        result = _recent_findings(limit=1)
+        assert "findings" in result
+        if result["findings"]:
+            assert "decision" in result["findings"][0]
 
 
 class TestGetPolicyTool:
