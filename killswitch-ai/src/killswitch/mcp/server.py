@@ -131,9 +131,11 @@ def _get_stats() -> Dict[str, Any]:
 
 def _recent_findings(limit: int = 20) -> Dict[str, Any]:
     """
-    Return recent audit findings from the local log.  Only metadata is
-    returned — no prompt text or secret values are ever stored in the logs
-    and none will appear here.
+    Return recent audit findings from the local log, enriched with the
+    decision (blocked/allowed/redacted/etc.) from the corresponding event.
+
+    Only metadata is returned — no prompt text or secret values are ever
+    stored in the logs and none will appear here.
     """
     import json
     from pathlib import Path
@@ -147,24 +149,47 @@ def _recent_findings(limit: int = 20) -> Dict[str, Any]:
         return {"findings": [], "total": 0, "shown": 0}
 
     all_findings: List[Dict[str, Any]] = []
-    for findings_file in sorted(sessions_dir.rglob("findings.jsonl"), reverse=True):
-        for line in findings_file.read_text().strip().splitlines():
-            try:
-                row = json.loads(line)
-                all_findings.append({
-                    "finding_id": row.get("finding_id", ""),
-                    "event_id": row.get("event_id", ""),
-                    "session_id": row.get("session_id", ""),
-                    "timestamp": row.get("timestamp", ""),
-                    "severity": row.get("severity", ""),
-                    "category": row.get("category", ""),
-                    "type": row.get("type", ""),
-                    "description": row.get("description", ""),
-                    "recommendation": row.get("recommendation", ""),
-                })
-            except Exception:
-                pass
-        if len(all_findings) >= limit * 2:
+
+    # Walk session dirs newest-first.  For each, build event_id→decision from
+    # events.jsonl, then enrich findings from findings.jsonl with that map.
+    session_dirs = sorted(sessions_dir.rglob("session.json"), reverse=True)
+    for session_meta_file in session_dirs:
+        sd = session_meta_file.parent
+
+        event_decisions: Dict[str, str] = {}
+        events_file = sd / "events.jsonl"
+        if events_file.exists():
+            for line in events_file.read_text().strip().splitlines():
+                try:
+                    row = json.loads(line)
+                    eid = row.get("event_id", "")
+                    if eid:
+                        event_decisions[eid] = row.get("decision", "")
+                except Exception:
+                    pass
+
+        findings_file = sd / "findings.jsonl"
+        if findings_file.exists():
+            for line in findings_file.read_text().strip().splitlines():
+                try:
+                    row = json.loads(line)
+                    event_id = row.get("event_id", "")
+                    all_findings.append({
+                        "finding_id": row.get("finding_id", ""),
+                        "event_id": event_id,
+                        "session_id": row.get("session_id", ""),
+                        "timestamp": row.get("timestamp", ""),
+                        "severity": row.get("severity", ""),
+                        "category": row.get("category", ""),
+                        "type": row.get("type", ""),
+                        "description": row.get("description", ""),
+                        "recommendation": row.get("recommendation", ""),
+                        "decision": event_decisions.get(event_id, ""),
+                    })
+                except Exception:
+                    pass
+
+        if len(all_findings) >= limit * 4:
             break
 
     all_findings.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
