@@ -11,29 +11,36 @@ def main() -> None:
         prog="killswitch",
         description="killswitch-ai — local LLM egress control",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        add_help=False,
         epilog="""
 commands:
   init          Set up killswitch in this project (interactive wizard)
   menu          Open the interactive report and settings menu
   status        Show current mode and last session summary
+  test          Verify killswitch-ai is installed and detecting secrets correctly
   scan <text>   Test the scanner on a piece of text
-  mode <mode>   Change the active mode (kill|pause|redact|report-only)
+  mode <mode>   Change the active mode (kill|drop|pause|redact|report-only|off)
+  on            Re-enable protection (sets mode to pause)
+  off           Disable all scanning — requests pass through with zero overhead
   logs          Show the latest session's findings
   event <id>    Look up a specific event by ID
   finding <id>  Look up a specific finding by ID
   report        Print the weekly summary report
   email         Toggle email reports (--on / --off)
+  mcp           Start the MCP server (stdio) for Claude Desktop / Cursor
 
 examples:
   killswitch init
+  killswitch test
   killswitch menu
   killswitch scan "my API_KEY is sk-proj-abc123"
   killswitch scan -v "my API_KEY is sk-proj-abc123"
   killswitch scan --super-verbose "my text here"
   killswitch mode kill
+  killswitch off
+  killswitch on
   killswitch logs --latest
   killswitch report --send
+  killswitch mcp
 
 verbose output (for scan):
   -v / --verbose        Show key steps as they happen — what was scanned, what
@@ -47,17 +54,15 @@ verbose output (for scan):
     KILLSWITCH_VERBOSE=2 python my_app.py
 """,
     )
-    parser.add_argument(
-        "-h", "--help",
-        action="store_true",
-        dest="open_menu",
-        help="Open the interactive menu (change mode, view stats, settings)",
-    )
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("init", help="Set up killswitch-ai (interactive wizard)")
     subparsers.add_parser("menu", help="Open the interactive menu")
     subparsers.add_parser("status", help="Show current status")
+    subparsers.add_parser(
+        "test",
+        help="Verify killswitch-ai is installed and detecting secrets correctly",
+    )
 
     scan_p = subparsers.add_parser(
         "scan",
@@ -94,9 +99,13 @@ verbose output (for scan):
     mode_p.add_argument(
         "new_mode",
         nargs="?",
-        choices=["kill", "pause", "redact", "report-only", "report_only"],
+        choices=["kill", "drop", "pause", "redact", "report-only", "report_only", "off"],
         help="New mode",
     )
+
+    subparsers.add_parser("off", help="Disable all scanning (requests pass through)")
+    subparsers.add_parser("on", help="Re-enable protection (sets mode to pause)")
+    subparsers.add_parser("mcp", help="Start the MCP server over stdio (Claude Desktop / Cursor)")
 
     logs_p = subparsers.add_parser("logs", help="View session logs")
     logs_p.add_argument("--latest", action="store_true", help="Show latest session")
@@ -118,9 +127,11 @@ verbose output (for scan):
 
     args = parser.parse_args()
 
-    if getattr(args, "open_menu", False) or args.command is None:
-        _cmd_menu()
+    if args.command is None:
+        parser.print_help()
         return
+
+    from .update_check import check_for_update
 
     if args.command == "init":
         _cmd_init()
@@ -128,10 +139,16 @@ verbose output (for scan):
         _cmd_menu()
     elif args.command == "status":
         _cmd_status()
+    elif args.command == "test":
+        _cmd_test()
     elif args.command == "scan":
         _cmd_scan(args)
     elif args.command == "mode":
         _cmd_mode(args)
+    elif args.command == "off":
+        _cmd_off()
+    elif args.command == "on":
+        _cmd_on()
     elif args.command == "logs":
         _cmd_logs(args)
     elif args.command == "event":
@@ -142,6 +159,110 @@ verbose output (for scan):
         _cmd_report(args)
     elif args.command == "email":
         _cmd_email(args)
+    elif args.command == "mcp":
+        _cmd_mcp()
+        return
+
+    check_for_update()
+
+
+def _cmd_mcp() -> None:
+    from ..mcp.server import serve
+    serve()
+
+
+def _cmd_test() -> None:
+    from ..core.config import get_config
+    from ..core.scanner import scan_text
+    from ..logging.logger import KillswitchLogger, reserve_event_id
+
+    cfg = get_config(reload=True)
+
+    # A synthetic key that is obviously not real but matches the openai_key pattern.
+    # The surrounding label makes the intent clear in any log that records it.
+    TEST_TEXT = "killswitch-test-input: sk-proj-TESTONLYkillswitchaisanitycheck1234567890"
+
+    w = 55
+    print()
+    print("═" * w)
+    print("  killswitch-ai  |  Installation test")
+    print("─" * w)
+    print()
+
+    if cfg.mode == "off":
+        print("  ⚠  Protection is currently DISABLED (killswitch off).")
+        print("  The scanner will still run this test, but your LLM")
+        print("  calls are NOT being protected right now.")
+        print("  Run 'killswitch on' to re-enable protection.")
+        print()
+
+    print("  Scanning a synthetic OpenAI key to verify detection is")
+    print("  live and working on this machine...")
+    print()
+
+    findings = scan_text(
+        TEST_TEXT,
+        extra_prohibited_terms=cfg.prohibited_terms,
+        entropy_enabled=False,
+        allowlist=cfg.allowlist,
+        disabled_finding_types=cfg.disabled_finding_types,
+    )
+
+    key_findings = [f for f in findings if f.finding_type == "openai_key"]
+
+    if not key_findings:
+        print("  ✗  FAILED — the scanner did not detect the synthetic key.")
+        print()
+        print("  This usually means a configuration or installation issue.")
+        print("  Try re-installing:  pip install --upgrade killswitch-ai")
+        print("  Then run:           killswitch test")
+        print()
+        print("═" * w)
+        print()
+        return
+
+    event_id = reserve_event_id()
+    top = key_findings[0]
+
+    sev_label = top.severity.upper()
+    print(f"  ✓  Detected: OpenAI API key  [{sev_label}]")
+    print(f"     The scanner caught a test secret before it could")
+    print(f"     leave your application.")
+    print()
+    print(f"  Decision  : BLOCKED — nothing was sent to an LLM.")
+    print(f"  Active mode: {cfg.mode.upper()}")
+    print(f"  Finding ID : {top.finding_id}")
+    print(f"  Event ID   : {event_id}")
+    print()
+    print("─" * w)
+    print()
+    print("  ✓  killswitch-ai is installed and protecting your")
+    print("     LLM calls.")
+    print()
+    print("  What to do next:")
+    print("    • See your current settings:   killswitch status")
+    print("    • Explore all options:          killswitch menu")
+    print("    • Scan any text:                killswitch scan \"...\"")
+    print()
+    print("═" * w)
+    print()
+
+    try:
+        from ..core.stats import record_test_run
+        record_test_run()
+    except Exception:
+        pass
+
+    if cfg.log_enabled:
+        logger = KillswitchLogger(log_dir=cfg.log_dir)
+        logger.log_event(
+            provider="test",
+            operation="killswitch_test",
+            mode="kill",
+            decision="blocked",
+            findings=key_findings,
+            event_id=event_id,
+        )
 
 
 def _cmd_init() -> None:
@@ -164,7 +285,14 @@ def _cmd_status() -> None:
     print()
     print(f"  killswitch-ai status")
     print(f"  {'─' * 40}")
-    print(f"  Mode       : {cfg.mode.upper()}")
+    if cfg.mode == "off":
+        print(f"  Mode       : OFF  ⚠  PROTECTION DISABLED")
+        print(f"  {'─' * 40}")
+        print(f"  Scanning is off — LLM requests pass through unscanned.")
+        print(f"  Run 'killswitch on' to re-enable protection.")
+        print(f"  {'─' * 40}")
+    else:
+        print(f"  Mode       : {cfg.mode.upper()}")
     print(f"  Config     : {cfg._source_path or 'no config file (using defaults)'}")
     print(f"  Log dir    : {cfg.log_dir}")
     print(f"  Email      : {'enabled → ' + cfg.email.address if cfg.email.enabled else 'off'}")
@@ -272,13 +400,43 @@ def _cmd_mode(args) -> None:
     new_mode = args.new_mode
     if not new_mode:
         print(f"\n  Current mode: {cfg.mode.upper()}")
-        print("  Available: kill | pause | redact | report-only\n")
+        print("  Available: kill | drop | pause | redact | report-only | off\n")
         return
 
     new_mode = new_mode.replace("-", "_")
     cfg.mode = new_mode
     save_config(cfg)
-    print(f"\n  ✓ Mode set to: {new_mode.upper()}\n")
+    if new_mode == "off":
+        print(f"\n  ⚠  Protection DISABLED — scanning is off.")
+        print(f"  LLM requests will pass through without any scanning.")
+        print(f"  Run 'killswitch on' to re-enable.\n")
+    else:
+        print(f"\n  ✓ Mode set to: {new_mode.upper()}\n")
+
+
+def _cmd_off() -> None:
+    from ..core.config import get_config, save_config
+
+    cfg = get_config(reload=True)
+    cfg.mode = "off"
+    save_config(cfg)
+    print()
+    print("  ⚠  killswitch-ai is now OFF.")
+    print("  LLM requests will pass through without any scanning.")
+    print("  Run 'killswitch on' to re-enable protection.")
+    print()
+
+
+def _cmd_on() -> None:
+    from ..core.config import get_config, save_config
+
+    cfg = get_config(reload=True)
+    cfg.mode = "pause"
+    save_config(cfg)
+    print()
+    print("  ✓ killswitch-ai is now ON (mode: pause).")
+    print("  LLM requests are being scanned and protected.")
+    print()
 
 
 def _cmd_logs(args) -> None:
