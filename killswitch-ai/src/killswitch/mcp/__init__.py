@@ -4,17 +4,13 @@ killswitch MCP server.
 Exposes killswitch-ai functionality as Model Context Protocol tools for use
 with MCP-capable clients (Claude Desktop, Cursor, etc.).
 
-Install with the mcp extra:
+Install the standalone MCP package:
 
-    pip install "killswitch-ai[mcp]"
+    pip install killswitch-mcp
 
-Start the server:
+Or start directly if mcp is already installed:
 
     killswitch mcp
-
-Or via the dedicated entry point:
-
-    killswitch-mcp
 
 NOTE: This MCP server is a **voluntary, opt-in** guardrail.  For automatic
 inline enforcement that intercepts every LLM call regardless of what an agent
