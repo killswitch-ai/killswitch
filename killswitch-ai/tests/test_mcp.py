@@ -211,6 +211,412 @@ class TestGetPolicyTool:
         result = _get_policy()
         assert isinstance(result["using_defaults"], bool)
 
+    def test_allowlist_field_present(self):
+        from killswitch.mcp.server import _get_policy
+        result = _get_policy()
+        assert "allowlist" in result
+
+    def test_allowlist_is_list(self):
+        from killswitch.mcp.server import _get_policy
+        result = _get_policy()
+        assert isinstance(result["allowlist"], list)
+
+    def test_allowlist_reflects_config(self):
+        from killswitch.mcp.server import _get_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg.allowlist = ["safe-token", "internal-key"]
+        set_config(cfg)
+        try:
+            result = _get_policy()
+            assert "safe-token" in result["allowlist"]
+            assert "internal-key" in result["allowlist"]
+        finally:
+            set_config(Config())
+
+    def test_allowlist_empty_when_config_has_none(self):
+        from killswitch.mcp.server import _get_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg.allowlist = []
+        set_config(cfg)
+        try:
+            result = _get_policy()
+            assert result["allowlist"] == []
+        finally:
+            set_config(Config())
+
+    def test_prohibited_terms_field_present(self):
+        from killswitch.mcp.server import _get_policy
+        result = _get_policy()
+        assert "prohibited_terms" in result
+
+    def test_prohibited_terms_is_list(self):
+        from killswitch.mcp.server import _get_policy
+        result = _get_policy()
+        assert isinstance(result["prohibited_terms"], list)
+
+    def test_prohibited_terms_reflects_config(self):
+        from killswitch.mcp.server import _get_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg.prohibited_terms = ["secret-word", "do-not-leak"]
+        set_config(cfg)
+        try:
+            result = _get_policy()
+            assert "secret-word" in result["prohibited_terms"]
+            assert "do-not-leak" in result["prohibited_terms"]
+        finally:
+            set_config(Config())
+
+    def test_prohibited_terms_empty_when_config_has_none(self):
+        from killswitch.mcp.server import _get_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg.prohibited_terms = []
+        set_config(cfg)
+        try:
+            result = _get_policy()
+            assert result["prohibited_terms"] == []
+        finally:
+            set_config(Config())
+
+
+class TestUpdatePolicyTool:
+    """Tests for _update_policy: valid updates and invalid input rejection."""
+
+    def setup_method(self):
+        from killswitch.core.config import set_config, Config
+        self._original = Config()
+        set_config(Config())
+
+    def teardown_method(self, tmp_path=None):
+        from killswitch.core.config import set_config, Config
+        set_config(self._original)
+
+    def test_update_mode_valid(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(mode="kill")
+        assert result["ok"] is True
+        assert result["changes"]["mode"]["new"] == "kill"
+        assert get_config().mode == "kill"
+
+    def test_update_mode_all_valid_values(self, tmp_path):
+        from killswitch.mcp.server import _update_policy, VALID_MODES
+        from killswitch.core.config import set_config, Config
+        for valid_mode in VALID_MODES:
+            cfg = Config()
+            cfg._source_path = tmp_path / "killswitch.yml"
+            set_config(cfg)
+            result = _update_policy(mode=valid_mode)
+            assert result["ok"] is True, f"mode={valid_mode} should be valid"
+
+    def test_update_mode_invalid_rejected(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(mode="blastoff")
+        assert result["ok"] is False
+        assert result["errors"]
+        assert any("blastoff" in e for e in result["errors"])
+
+    def test_add_prohibited_terms(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(prohibited_terms_add=["SUPER_SECRET", "DO_NOT_LEAK"])
+        assert result["ok"] is True
+        terms = get_config().prohibited_terms
+        assert "SUPER_SECRET" in terms
+        assert "DO_NOT_LEAK" in terms
+
+    def test_add_prohibited_terms_no_duplicates(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        existing = cfg.prohibited_terms[0]
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        _update_policy(prohibited_terms_add=[existing])
+        terms = get_config().prohibited_terms
+        assert terms.count(existing) == 1
+
+    def test_remove_prohibited_terms(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        term_to_remove = cfg.prohibited_terms[0]
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(prohibited_terms_remove=[term_to_remove])
+        assert result["ok"] is True
+        assert term_to_remove not in get_config().prohibited_terms
+
+    def test_update_actions_valid(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(actions={"jwt_token": "kill", "high_entropy_string": "pause"})
+        assert result["ok"] is True
+        updated_cfg = get_config()
+        assert updated_cfg.actions["jwt_token"] == "kill"
+        assert updated_cfg.actions["high_entropy_string"] == "pause"
+
+    def test_update_actions_invalid_action_rejected(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(actions={"jwt_token": "explode"})
+        assert result["ok"] is False
+        assert result["errors"]
+        assert any("explode" in e for e in result["errors"])
+
+    def test_multiple_validation_errors_all_returned(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(
+            mode="invalid_mode",
+            actions={"jwt_token": "bad_action"},
+        )
+        assert result["ok"] is False
+        assert len(result["errors"]) >= 2
+
+    def test_no_op_call_succeeds(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy()
+        assert result["ok"] is True
+        assert result["changes"] == {}
+
+    def test_result_has_note_mentioning_immediate_effect(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(mode="off")
+        assert "note" in result
+        assert "immediately" in result["note"].lower() or "take effect" in result["note"].lower()
+
+    def test_changes_persisted_to_disk(self, tmp_path):
+        import yaml
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        _update_policy(mode="redact")
+        data = yaml.safe_load((tmp_path / "killswitch.yml").read_text())
+        mode_val = data.get("mode", {})
+        assert mode_val.get("default_action") == "redact"
+
+    def test_result_contains_config_file_path(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(mode="pause")
+        assert "config_file" in result
+        assert result["config_file"] is not None
+
+    def test_allowlist_add(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(allowlist_add=["my-safe-token", "internal-key"])
+        assert result["ok"] is True
+        allowlist = get_config().allowlist
+        assert "my-safe-token" in allowlist
+        assert "internal-key" in allowlist
+
+    def test_allowlist_add_no_duplicates(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg.allowlist = ["existing-entry"]
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        _update_policy(allowlist_add=["existing-entry"])
+        allowlist = get_config().allowlist
+        assert allowlist.count("existing-entry") == 1
+
+    def test_allowlist_remove(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg.allowlist = ["keep-me", "remove-me"]
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(allowlist_remove=["remove-me"])
+        assert result["ok"] is True
+        allowlist = get_config().allowlist
+        assert "remove-me" not in allowlist
+        assert "keep-me" in allowlist
+
+    def test_allowlist_remove_nonexistent_is_noop(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg.allowlist = ["keep-me"]
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(allowlist_remove=["not-present"])
+        assert result["ok"] is True
+        assert get_config().allowlist == ["keep-me"]
+
+    def test_allowlist_changes_recorded_in_changes(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg.allowlist = ["old-entry"]
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(
+            allowlist_add=["new-entry"],
+            allowlist_remove=["old-entry"],
+        )
+        assert result["ok"] is True
+        assert "allowlist_added" in result["changes"]
+        assert "new-entry" in result["changes"]["allowlist_added"]
+        assert "allowlist_removed" in result["changes"]
+        assert "old-entry" in result["changes"]["allowlist_removed"]
+
+    def test_allowlist_persisted_to_disk(self, tmp_path):
+        import yaml
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        _update_policy(allowlist_add=["safe-pattern"])
+        data = yaml.safe_load((tmp_path / "killswitch.yml").read_text())
+        allowlist = data.get("detection", {}).get("allowlist", [])
+        assert "safe-pattern" in allowlist
+
+    def test_allowlist_no_op_when_not_supplied(self, tmp_path):
+        from killswitch.mcp.server import _update_policy
+        from killswitch.core.config import get_config, set_config, Config
+        cfg = Config()
+        cfg.allowlist = ["unchanged"]
+        cfg._source_path = tmp_path / "killswitch.yml"
+        set_config(cfg)
+        result = _update_policy(mode="pause")
+        assert result["ok"] is True
+        assert get_config().allowlist == ["unchanged"]
+        assert "allowlist_added" not in result["changes"]
+        assert "allowlist_removed" not in result["changes"]
+
+
+class TestCheckPolicyTool:
+    """Tests for _check_policy: all three outcomes — prohibited, allowlisted, neither."""
+
+    def setup_method(self):
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg.prohibited_terms = ["forbidden-word", "do-not-send"]
+        cfg.allowlist = ["safe-token", "internal-key"]
+        set_config(cfg)
+
+    def teardown_method(self, _method=None):
+        from killswitch.core.config import set_config, Config
+        set_config(Config())
+
+    def test_prohibited_term_returns_prohibited(self):
+        from killswitch.mcp.server import _check_policy
+        result = _check_policy("forbidden-word")
+        assert result["prohibited"] is True
+        assert result["allowlisted"] is False
+        assert result["status"] == "prohibited"
+
+    def test_allowlisted_term_returns_allowlisted(self):
+        from killswitch.mcp.server import _check_policy
+        result = _check_policy("safe-token")
+        assert result["prohibited"] is False
+        assert result["allowlisted"] is True
+        assert result["status"] == "allowlisted"
+
+    def test_unknown_term_returns_neither(self):
+        from killswitch.mcp.server import _check_policy
+        result = _check_policy("totally-unrelated-word")
+        assert result["prohibited"] is False
+        assert result["allowlisted"] is False
+        assert result["status"] == "neither"
+
+    def test_term_echoed_in_response(self):
+        from killswitch.mcp.server import _check_policy
+        result = _check_policy("some-term")
+        assert result["term"] == "some-term"
+
+    def test_result_has_required_fields(self):
+        from killswitch.mcp.server import _check_policy
+        result = _check_policy("anything")
+        assert "term" in result
+        assert "prohibited" in result
+        assert "allowlisted" in result
+        assert "status" in result
+
+    def test_status_values_are_valid(self):
+        from killswitch.mcp.server import _check_policy
+        valid_statuses = {"prohibited", "allowlisted", "neither"}
+        for term in ["forbidden-word", "safe-token", "unknown"]:
+            result = _check_policy(term)
+            assert result["status"] in valid_statuses
+
+    def test_prohibited_takes_precedence_when_in_both(self):
+        from killswitch.mcp.server import _check_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg.prohibited_terms = ["overlap-term"]
+        cfg.allowlist = ["overlap-term"]
+        set_config(cfg)
+        result = _check_policy("overlap-term")
+        assert result["prohibited"] is True
+        assert result["allowlisted"] is True
+        assert result["status"] == "prohibited"
+
+    def test_second_prohibited_term_also_detected(self):
+        from killswitch.mcp.server import _check_policy
+        result = _check_policy("do-not-send")
+        assert result["status"] == "prohibited"
+
+    def test_second_allowlist_term_also_detected(self):
+        from killswitch.mcp.server import _check_policy
+        result = _check_policy("internal-key")
+        assert result["status"] == "allowlisted"
+
+    def test_empty_lists_returns_neither(self):
+        from killswitch.mcp.server import _check_policy
+        from killswitch.core.config import set_config, Config
+        cfg = Config()
+        cfg.prohibited_terms = []
+        cfg.allowlist = []
+        set_config(cfg)
+        result = _check_policy("anything")
+        assert result["status"] == "neither"
+        assert result["prohibited"] is False
+        assert result["allowlisted"] is False
+
 
 class TestMcpServerRegistration:
     def test_server_module_importable(self):
@@ -225,7 +631,7 @@ class TestMcpServerRegistration:
         from killswitch.mcp.server import serve
         assert callable(serve)
 
-    def test_all_five_tools_registered(self):
+    def test_all_seven_tools_registered(self):
         from killswitch.mcp.server import mcp
         tools = asyncio.run(mcp.list_tools())
         tool_names = {t.name for t in tools}
@@ -234,6 +640,8 @@ class TestMcpServerRegistration:
         assert "get_stats" in tool_names
         assert "recent_findings" in tool_names
         assert "get_policy" in tool_names
+        assert "check_policy" in tool_names
+        assert "update_policy" in tool_names
 
     def test_scan_tool_has_description_mentioning_guardrail(self):
         from killswitch.mcp.server import mcp
