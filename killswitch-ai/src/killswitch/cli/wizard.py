@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
 from ..core.config import Config, EmailConfig, save_config
 
@@ -41,16 +41,16 @@ MODE_DESCRIPTIONS = {
     ),
 }
 
-# (key, label, default_on)
-DATA_CATEGORIES = [
-    ("api_keys",         "API keys (OpenAI, Anthropic, AWS, GitHub, Stripe, etc.)",    True),
-    ("env_files",        ".env files and environment variable files",                   True),
-    ("private_keys",     "Private keys and certificates (.pem, .key, id_rsa, etc.)",   True),
-    ("passwords",        "Passwords and database credentials",                          True),
-    ("database_urls",    "Database connection URLs (postgres://, mysql://, etc.)",      True),
-    ("cloud_creds",      "Cloud credentials (AWS, GCP, Azure config files)",            True),
-    ("jwt_tokens",       "JWT tokens",                                                  False),
-    ("high_entropy",     "High-entropy strings (might be secrets, might be hashes)",    False),
+# (key, label, default_on, default_action)
+DATA_CATEGORIES: List[Tuple[str, str, bool, str]] = [
+    ("api_keys",      "API keys (OpenAI, Anthropic, AWS, GitHub, Stripe, etc.)", True,  "kill"),
+    ("env_files",     ".env files and environment variable files",                True,  "pause"),
+    ("private_keys",  "Private keys and certificates (.pem, .key, id_rsa, etc.)", True, "kill"),
+    ("passwords",     "Passwords and database credentials",                       True,  "pause"),
+    ("database_urls", "Database connection URLs (postgres://, mysql://, etc.)",   True,  "pause"),
+    ("cloud_creds",   "Cloud credentials (AWS, GCP, Azure config files)",         True,  "kill"),
+    ("jwt_tokens",    "JWT tokens",                                                False, "redact"),
+    ("high_entropy",  "High-entropy strings (might be secrets, might be hashes)", False, "report_only"),
 ]
 
 # Maps wizard category keys → Config action overrides.
@@ -65,6 +65,15 @@ _CATEGORY_TO_FINDING_TYPES: dict[str, list[str]] = {
     "cloud_creds":   ["aws_secret_key"],
     "jwt_tokens":    ["jwt_token"],
     "high_entropy":  ["high_entropy_string"],
+}
+
+_VALID_ACTIONS = {"kill", "redact", "pause", "report_only", "report-only"}
+_ACTION_NORM: dict[str, str] = {
+    "kill": "kill",
+    "redact": "redact",
+    "pause": "pause",
+    "report_only": "report_only",
+    "report-only": "report_only",
 }
 
 
@@ -98,19 +107,34 @@ def _ask_yn(prompt: str, default: bool = True) -> bool:
         sys.exit(0)
 
 
+def _ask_action(category_label: str, default_action: str) -> str:
+    """
+    Prompt the user to choose an action for a data category.
+    Returns the normalised action string.
+    """
+    _print()
+    _print(f"    How should killswitch-ai handle {category_label}?")
+    _print(f"    kill        — block the request immediately")
+    _print(f"    redact      — replace the secret with [REDACTED], continue")
+    _print(f"    pause       — ask you what to do at runtime")
+    _print(f"    report-only — log only, let the request through")
+    raw = _ask(f"    Action", default_action).lower().strip()
+    return _ACTION_NORM.get(raw, default_action)
+
+
 def run_wizard(config_path: Path | None = None) -> None:
     print(BANNER)
     _print("  Welcome to killswitch-ai setup.")
-    _print("  This wizard will configure what to protect and what to do when")
-    _print("  sensitive content is detected.")
+    _print("  This wizard takes about 1 minute. Fine-grained settings are")
+    _print("  available any time in: killswitch menu")
     _print()
-    _print("  Takes about 2 minutes. Press Ctrl+C anytime to exit.")
+    _print("  Press Ctrl+C anytime to exit.")
     _print()
     _hr()
 
     # --- Step 1: Choose mode ---
     _print()
-    _print("  STEP 1 OF 4 — What should happen when something is detected?")
+    _print("  STEP 1 OF 3 — What should happen when something is detected?")
     _print()
     for i, (key, desc) in enumerate(MODE_DESCRIPTIONS.items(), 1):
         _print(f"  {i}. {desc}")
@@ -126,30 +150,11 @@ def run_wizard(config_path: Path | None = None) -> None:
     _print()
     _print(f"  ✓ Mode set to: {mode}")
 
-    # --- Step 2: Data categories ---
+    # --- Step 2: Email reports ---
     _print()
     _hr()
     _print()
-    _print("  STEP 2 OF 4 — What data should never be sent to an AI?")
-    _print()
-    _print("  Press Enter to keep the default [✓ = on, ✗ = off].")
-    _print()
-
-    selected_categories: List[str] = []
-    for key, label, default_on in DATA_CATEGORIES:
-        default_marker = "✓" if default_on else "✗"
-        answer = _ask_yn(f"[{default_marker}] {label}", default=default_on)
-        if answer:
-            selected_categories.append(key)
-
-    _print()
-    _print(f"  ✓ Protecting {len(selected_categories)} data categories.")
-
-    # --- Step 3: Email reports ---
-    _print()
-    _hr()
-    _print()
-    _print("  STEP 3 OF 5 — Email reports (optional)")
+    _print("  STEP 2 OF 3 — Email reports (optional)")
     _print()
     _print("  killswitch-ai can send you a weekly summary by email.")
     _print("  The summary contains ONLY anonymous counts — how many requests")
@@ -170,48 +175,62 @@ def run_wizard(config_path: Path | None = None) -> None:
             _print("  What will be sent (nothing else):")
             _print("    • Total LLM calls scanned")
             _print("    • Number blocked / redacted / flagged")
-            _print("    • Finding counts by severity")
+            _print("    • Finding counts by severity and category")
             _print("    • A hashed install ID and project ID (never your actual path)")
             _print()
             _print("  To turn off anytime: killswitch email --off")
         else:
             wants_email = False
 
-    # --- Step 4: Anonymous telemetry ---
+    # --- Step 3: Anonymous telemetry ---
     _print()
     _hr()
     _print()
-    _print("  STEP 4 OF 5 — Anonymous usage telemetry (optional)")
+    _print("  STEP 3 OF 3 — Anonymous usage telemetry (optional)")
     _print()
-    _print("  Help improve killswitch-ai by sharing anonymous usage statistics.")
-    _print("  This sends periodic aggregated counts to the killswitch-ai team:")
+    _print("  Would you like to share anonymous aggregate usage trends?")
     _print()
-    _print("    • Which LLM models and providers you call (model names only)")
-    _print("    • How many calls were scanned / blocked / redacted")
-    _print("    • Which finding types were triggered most often")
-    _print("    • Your Python version and OS type (macos / linux / windows)")
-    _print("    • killswitch-ai library version")
+    _print("  We collect:")
+    _print("    - number of scans")
+    _print("    - number of blocked requests")
+    _print("    - finding categories")
+    _print("    - severity counts")
+    _print("    - provider type")
+    _print("    - killswitch-ai version")
+    _print("    - operating system family")
     _print()
-    _print("  What is NEVER sent:")
-    _print("    • Prompt text or message content of any kind")
-    _print("    • Matched secret values")
-    _print("    • File paths, project names, or any identifying information")
-    _print("    • Your email address or install ID in any human-readable form")
+    _print("  We do not collect:")
+    _print("    - prompts")
+    _print("    - responses")
+    _print("    - source code")
+    _print("    - file contents")
+    _print("    - terminal output")
+    _print("    - API keys")
+    _print("    - secrets")
+    _print("    - full commands")
+    _print("    - absolute file paths")
     _print()
     _print("  Telemetry is off by default. You can change this anytime in")
     _print("  killswitch.yml under the 'telemetry' key.")
     _print()
 
-    wants_telemetry = _ask_yn("Enable anonymous telemetry?", default=False)
-    if wants_telemetry:
+    if wants_email:
+        # Email reports require telemetry — turn it on automatically.
+        wants_telemetry = True
         _print()
-        _print("  ✓ Anonymous telemetry enabled. Thank you!")
+        _print("  ✓ Anonymous telemetry enabled automatically (required for email reports).")
+    else:
+        wants_telemetry = _ask_yn("Enable anonymous telemetry?", default=False)
+        if wants_telemetry:
+            _print()
+            _print("  ✓ Anonymous telemetry enabled. Thank you!")
 
-    # --- Step 5: Build and save config ---
+    # --- Save config ---
+    # Apply default category settings — all defaults-on categories get their
+    # default action, defaults-off categories are disabled. Fine-grained
+    # overrides are available via `killswitch menu`.
     _print()
     _hr()
-    _print()
-    _print("  STEP 5 OF 5 — Saving your configuration...")
     _print()
 
     cfg = Config(mode=mode)
@@ -221,20 +240,16 @@ def run_wizard(config_path: Path | None = None) -> None:
     )
     cfg.telemetry_enabled = wants_telemetry
 
-    # Apply category selections to the config:
-    #
-    # • high_entropy controls the entropy scanner flag.
-    # • All other categories map to specific finding types.  When a category
-    #   is deselected the corresponding action is set to "allow" so those
-    #   findings pass through without triggering the global mode.
-    cfg.entropy_enabled = "high_entropy" in selected_categories
+    cfg.entropy_enabled = False  # high_entropy is off by default; toggle via menu
 
-    for cat_key, finding_types in _CATEGORY_TO_FINDING_TYPES.items():
-        if cat_key == "high_entropy":
-            continue  # handled above via entropy_enabled
-        if cat_key not in selected_categories:
+    for cat_key, label, default_on, default_action in DATA_CATEGORIES:
+        finding_types = _CATEGORY_TO_FINDING_TYPES.get(cat_key, [])
+        if not default_on:
             for ft in finding_types:
                 cfg.actions[ft] = "allow"
+        else:
+            for ft in finding_types:
+                cfg.actions[ft] = default_action
 
     save_path = config_path or (Path.cwd() / "killswitch.yml")
     save_config(cfg, save_path)
@@ -262,13 +277,13 @@ def run_wizard(config_path: Path | None = None) -> None:
     _print()
     _print("    client = GuardedOpenAI(OpenAI())")
     _print()
+    _print("  Verify it's working:")
+    _print()
+    _print("    killswitch test")
+    _print()
     _print("  View your local reports anytime:")
     _print()
     _print("    killswitch menu")
-    _print()
-    _print("  Test the scanner:")
-    _print()
-    _print('    killswitch scan "your text here"')
     _print()
     _hr("═")
     _print()
