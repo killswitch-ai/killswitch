@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from killswitch_ai.core.config import Config
-from killswitch_ai.core.scanner import Finding, ScanResult
+from killswitch.core.config import Config
+from killswitch.core.scanner import Finding, ScanResult
 
 
 def _make_finding(
@@ -41,7 +41,7 @@ def _run_scan_cmd(text: str, json_output: bool = False):
     """
     import sys
     import argparse
-    from killswitch_ai.cli.main import _cmd_scan
+    from killswitch.cli.main import _cmd_scan
 
     args = argparse.Namespace(text=text, json=json_output)
     captured = StringIO()
@@ -58,8 +58,8 @@ class TestCliScanNoFindings:
     def test_no_findings_prints_all_clear(self):
         cfg = Config(mode="pause")
         empty_result = ScanResult(findings=[], scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=empty_result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=empty_result):
             output = _run_scan_cmd("Hello, world!")
 
         assert "No issues detected" in output
@@ -68,8 +68,8 @@ class TestCliScanNoFindings:
     def test_no_findings_json_mode_returns_empty_list(self):
         cfg = Config(mode="pause")
         empty_result = ScanResult(findings=[], scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=empty_result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=empty_result):
             output = _run_scan_cmd("Hello, world!", json_output=True)
 
         data = json.loads(output)
@@ -78,8 +78,8 @@ class TestCliScanNoFindings:
     def test_no_findings_json_has_correct_structure(self):
         cfg = Config(mode="kill")
         empty_result = ScanResult(findings=[], scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=empty_result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=empty_result):
             output = _run_scan_cmd("safe text", json_output=True)
 
         data = json.loads(output)
@@ -92,8 +92,8 @@ class TestCliScanWithFindings:
         cfg = Config(mode="kill")
         finding = _make_finding()
         result = ScanResult(findings=[finding], scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=result):
             output = _run_scan_cmd("sk-proj-abc123xyzlong")
 
         assert "CRITICAL" in output
@@ -104,8 +104,8 @@ class TestCliScanWithFindings:
         cfg = Config(mode="kill")
         finding = _make_finding()
         result = ScanResult(findings=[finding], scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=result):
             output = _run_scan_cmd("sk-proj-abc123xyzlong")
 
         # Decision line should show the mode and resolved action
@@ -115,8 +115,8 @@ class TestCliScanWithFindings:
         cfg = Config(mode="pause")
         finding = _make_finding()
         result = ScanResult(findings=[finding], scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=result):
             output = _run_scan_cmd("sk-proj-abc123xyzlong", json_output=True)
 
         data = json.loads(output)
@@ -134,8 +134,8 @@ class TestCliScanWithFindings:
             _make_finding("prohibited_term", "medium", "Prohibited term detected in prompt"),
         ]
         result = ScanResult(findings=findings, scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=result):
             output = _run_scan_cmd("some text with issues", json_output=True)
 
         data = json.loads(output)
@@ -145,8 +145,8 @@ class TestCliScanWithFindings:
         cfg = Config(mode="pause")
         findings = [_make_finding(), _make_finding("github_token", "critical")]
         result = ScanResult(findings=findings, scanned_units=1)
-        with patch("killswitch_ai.core.config.get_config", return_value=cfg), \
-             patch("killswitch_ai.core.scanner.scan_units", return_value=result):
+        with patch("killswitch.core.config.get_config", return_value=cfg), \
+             patch("killswitch.core.scanner.scan_units", return_value=result):
             output = _run_scan_cmd("some text")
 
         assert "2" in output  # "Found 2 issue(s)"
@@ -158,7 +158,7 @@ class TestCliScanPrivacy:
         The Finding.description for prohibited terms must not contain the
         matched substring — it's persisted to disk via findings.jsonl.
         """
-        from killswitch_ai.core.scanner import scan_text
+        from killswitch.core.scanner import scan_text
 
         findings = scan_text(
             "my API_KEY is here",
@@ -176,7 +176,7 @@ class TestCliScanPrivacy:
 
     def test_finding_description_is_taxonomy_safe(self):
         """Generic finding descriptions must use taxonomy language only."""
-        from killswitch_ai.core.scanner import scan_text
+        from killswitch.core.scanner import scan_text
 
         # Try a custom prohibited term from config
         findings = scan_text(
@@ -198,8 +198,8 @@ class TestRedactorFieldIsolation:
 
     def test_redact_does_not_corrupt_model_field(self):
         """A secret in `input` must not cause `model` to be mutated."""
-        from killswitch_ai.core.redactor import redact_string_in_payload
-        from killswitch_ai.core.scanner import Finding
+        from killswitch.core.redactor import redact_string_in_payload
+        from killswitch.core.scanner import Finding
 
         secret = "sk-proj-abc123xyzlongSecret99"
         finding = Finding(
@@ -220,8 +220,8 @@ class TestRedactorFieldIsolation:
 
     def test_redact_does_not_corrupt_tool_name(self):
         """A secret in message content must not mangle unrelated tool names."""
-        from killswitch_ai.core.redactor import redact_string_in_payload
-        from killswitch_ai.core.scanner import Finding
+        from killswitch.core.redactor import redact_string_in_payload
+        from killswitch.core.scanner import Finding
 
         secret = "ghp_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdefg"  # 36+ chars after prefix
         finding = Finding(
@@ -246,8 +246,8 @@ class TestRedactorFieldIsolation:
 
     def test_prohibited_term_redacted_only_in_content(self):
         """Prohibited term redaction must not touch unrelated string fields."""
-        from killswitch_ai.core.redactor import redact_string_in_payload
-        from killswitch_ai.core.scanner import Finding
+        from killswitch.core.redactor import redact_string_in_payload
+        from killswitch.core.scanner import Finding
 
         finding = Finding(
             finding_type="prohibited_term",
@@ -270,8 +270,8 @@ class TestRedactorFieldIsolation:
 
     def test_clean_fields_completely_unchanged_after_redact(self):
         """All clean fields must be byte-for-byte identical after redaction."""
-        from killswitch_ai.core.redactor import redact_string_in_payload
-        from killswitch_ai.core.scanner import Finding
+        from killswitch.core.redactor import redact_string_in_payload
+        from killswitch.core.scanner import Finding
 
         secret = "sk-ant-api03-SecretValueHereLong12345"
         finding = Finding(
@@ -304,7 +304,7 @@ class TestCliScanRecursivePayload:
     the top-level message content fields.
     """
     def test_openai_responses_scans_tool_args(self):
-        from killswitch_ai.core.normalizer import normalize_openai_responses
+        from killswitch.core.normalizer import normalize_openai_responses
 
         payload = {
             "input": "Hello",
@@ -328,7 +328,7 @@ class TestCliScanRecursivePayload:
         )
 
     def test_anthropic_scans_tool_use_input(self):
-        from killswitch_ai.core.normalizer import normalize_anthropic_messages
+        from killswitch.core.normalizer import normalize_anthropic_messages
 
         payload = {
             "messages": [
@@ -352,7 +352,7 @@ class TestCliScanRecursivePayload:
         )
 
     def test_openai_chat_scans_function_call_arguments(self):
-        from killswitch_ai.core.normalizer import normalize_openai_chat
+        from killswitch.core.normalizer import normalize_openai_chat
 
         payload = {
             "messages": [

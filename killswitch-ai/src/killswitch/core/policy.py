@@ -8,10 +8,12 @@ SEVERITY_ORDER = ["critical", "high", "medium", "low"]
 
 ACTION_PRIORITY = {
     "kill": 4,
+    "drop": 4,
     "pause": 3,
     "redact": 2,
     "report_only": 1,
     "allow": 0,
+    "off": 0,
 }
 
 
@@ -25,6 +27,8 @@ def resolve_action(
     action that applies across all findings.
     """
     if not findings:
+        return "allow"
+    if default_mode == "off":
         return "allow"
 
     resolved = "allow"

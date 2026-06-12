@@ -2,7 +2,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from killswitch_ai.core.config import Config, load_config, save_config, get_config, set_config
+from killswitch.core.config import Config, load_config, save_config, get_config, set_config
 
 
 class TestConfigDefaults:

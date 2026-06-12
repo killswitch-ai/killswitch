@@ -1,7 +1,8 @@
 import pytest
-from killswitch_ai.core.scanner import Finding
-from killswitch_ai.core.policy import resolve_action
-from killswitch_ai.exceptions import KillswitchBlocked
+from killswitch.core.decision import execute_decision
+from killswitch.core.scanner import Finding
+from killswitch.core.policy import resolve_action
+from killswitch.exceptions import KillswitchBlocked
 
 
 def _make_finding(finding_type: str = "openai_key", severity: str = "critical") -> Finding:
@@ -49,6 +50,18 @@ class TestResolveAction:
         action = resolve_action([f], actions)
         assert action == "report_only"
 
+    def test_drop_action_resolves(self):
+        actions = {"openai_key": "drop"}
+        f = _make_finding("openai_key", "critical")
+        action = resolve_action([f], actions)
+        assert action == "drop"
+
+    def test_off_mode_disables_actions(self):
+        actions = {"openai_key": "kill"}
+        f = _make_finding("openai_key", "critical")
+        action = resolve_action([f], actions, default_mode="off")
+        assert action == "allow"
+
 
 class TestKillswitchBlocked:
     def test_exception_message_contains_finding_id(self):
@@ -66,3 +79,18 @@ class TestKillswitchBlocked:
         f = _make_finding()
         exc = KillswitchBlocked(f, "KAI-E-test")
         assert isinstance(exc, Exception)
+
+
+class TestExecuteDecision:
+    def test_drop_returns_drop_without_raising(self):
+        f = _make_finding()
+        action, payload = execute_decision(
+            "drop",
+            {"input": "dummy"},
+            [f],
+            "KAI-E-test",
+            provider="openai",
+            operation="responses.create",
+        )
+        assert action == "drop"
+        assert payload == {"input": "dummy"}

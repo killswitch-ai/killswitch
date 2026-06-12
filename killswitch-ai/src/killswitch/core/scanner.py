@@ -24,7 +24,7 @@ SENSITIVE_FILE_PATTERNS = [
 ]
 
 SECRET_PATTERNS: List[tuple[str, str, str, re.Pattern]] = [
-    ("openai_key",       "critical", "Possible OpenAI API key",           re.compile(r"sk-(?:proj-|o1-)?[A-Za-z0-9_\-]{20,}")),
+    ("openai_key",       "critical", "Possible OpenAI API key",           re.compile(r"sk-(?!ant-)(?:proj-|o1-)?[A-Za-z0-9_\-]{20,}")),
     ("anthropic_key",    "critical", "Possible Anthropic API key",         re.compile(r"sk-ant-[A-Za-z0-9_\-]{20,}")),
     ("aws_access_key",   "critical", "Possible AWS access key ID",         re.compile(r"AKIA[0-9A-Z]{16}")),
     ("aws_secret_key",   "critical", "Possible AWS secret access key",     re.compile(r"(?i)aws[_\-\s]?secret[_\-\s]?(?:access[_\-\s]?)?key['\"]?\s*[:=]\s*['\"]?([A-Za-z0-9/+=]{40})")),

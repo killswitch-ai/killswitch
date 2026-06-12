@@ -6,7 +6,16 @@ import sys
 from pathlib import Path
 
 
+def _configure_cli_streams() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> None:
+    _configure_cli_streams()
+
     parser = argparse.ArgumentParser(
         prog="killswitch",
         description="killswitch-ai — local LLM egress control",

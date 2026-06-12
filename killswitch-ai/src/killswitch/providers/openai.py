@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any, Optional
 
 from ..core.config import get_config, Config
@@ -117,6 +118,24 @@ def _guard_payload(
     return final_action, sanitized
 
 
+def _dropped_response(operation: str) -> Any:
+    if operation == "chat.completions.create":
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content=""),
+                    finish_reason="stop",
+                )
+            ],
+            _killswitch_dropped=True,
+        )
+    return SimpleNamespace(
+        output_text="",
+        output=[],
+        _killswitch_dropped=True,
+    )
+
+
 class GuardedOpenAI:
     """
     A drop-in wrapper for openai.OpenAI that scans payloads before sending.
@@ -162,7 +181,9 @@ class _GuardedResponses:
 
     def create(self, **kwargs: Any) -> Any:
         cfg = self._guard._get_config()
-        _, sanitized = _guard_payload(kwargs, "responses.create", cfg)
+        action, sanitized = _guard_payload(kwargs, "responses.create", cfg)
+        if action == "drop":
+            return _dropped_response("responses.create")
         target = self._real_responses or self._client.responses
         return target.create(**sanitized)
 
@@ -190,7 +211,9 @@ class _GuardedChatCompletions:
 
     def create(self, **kwargs: Any) -> Any:
         cfg = self._guard._get_config()
-        _, sanitized = _guard_payload(kwargs, "chat.completions.create", cfg)
+        action, sanitized = _guard_payload(kwargs, "chat.completions.create", cfg)
+        if action == "drop":
+            return _dropped_response("chat.completions.create")
         target = self._real_completions or self._client.chat.completions
         return target.create(**sanitized)
 
