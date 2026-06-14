@@ -32,7 +32,12 @@ Verbose output::
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("killswitch-ai")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 __all__ = ["install", "scan", "KillswitchBlocked"]
 
 from .exceptions import KillswitchBlocked
@@ -102,7 +107,10 @@ def _patch_openai(cfg) -> None:
 
             class _ResponsesShim:
                 def create(_, **kw):
-                    _, sanitized = _guard_payload(kw, "responses.create", cfg)
+                    action, sanitized = _guard_payload(kw, "responses.create", cfg)
+                    if action == "drop":
+                        from .providers.openai import _dropped_response
+                        return _dropped_response("responses.create")
                     return _orig_responses.create(**sanitized)
 
                 def __getattr__(_, name):
@@ -110,7 +118,10 @@ def _patch_openai(cfg) -> None:
 
             class _CompletionsShim:
                 def create(_, **kw):
-                    _, sanitized = _guard_payload(kw, "chat.completions.create", cfg)
+                    action, sanitized = _guard_payload(kw, "chat.completions.create", cfg)
+                    if action == "drop":
+                        from .providers.openai import _dropped_response
+                        return _dropped_response("chat.completions.create")
                     return _orig_chat.completions.create(**sanitized)
 
                 def __getattr__(_, name):
@@ -144,7 +155,10 @@ def _patch_anthropic(cfg) -> None:
 
             class _MessagesShim:
                 def create(_, **kw):
-                    _, sanitized = _guard_payload(kw, "messages.create", cfg)
+                    action, sanitized = _guard_payload(kw, "messages.create", cfg)
+                    if action == "drop":
+                        from .providers.anthropic import _dropped_response
+                        return _dropped_response()
                     return _orig_messages.create(**sanitized)
 
                 def __getattr__(_, name):

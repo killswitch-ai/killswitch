@@ -1,5 +1,5 @@
 import pytest
-from killswitch_ai.core.normalizer import (
+from killswitch.core.normalizer import (
     normalize_openai_responses,
     normalize_openai_chat,
     normalize_anthropic_messages,

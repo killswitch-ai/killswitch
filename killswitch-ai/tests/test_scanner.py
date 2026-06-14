@@ -16,6 +16,13 @@ class TestSecretPatterns:
         types = [f.finding_type for f in findings]
         assert "anthropic_key" in types
 
+    def test_anthropic_key_not_classified_as_openai_key(self):
+        key = "sk-ant-" + "api03-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890ABCD"
+        findings = scan_text(key, entropy_enabled=False)
+        types = [f.finding_type for f in findings]
+        assert "anthropic_key" in types
+        assert "openai_key" not in types
+
     def test_aws_access_key_detected(self):
         key = "AKIA" + "IOSFODNN7EXAMPLE"
         findings = scan_text(key, entropy_enabled=False)

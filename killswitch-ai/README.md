@@ -97,6 +97,13 @@ Everything runs locally. No prompts, responses, file contents, or secret values 
 | **Sensitive file paths** | `.env`, `*.pem`, `id_rsa`, `credentials.json`, `kubeconfig` |
 | **Structured payloads** | Recursively scans every field in nested JSON |
 
+### Current scope
+
+killswitch-ai is currently focused on LLM egress control for secrets, credentials,
+tokens, sensitive file references, prohibited terms, and high-entropy strings. Broad
+PII detection such as email addresses and phone numbers is not currently included;
+that should be treated as a future enhancement rather than an existing guarantee.
+
 ---
 
 ## Modes

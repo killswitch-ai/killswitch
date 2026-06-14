@@ -1,6 +1,6 @@
 import pytest
-from killswitch_ai.core.redactor import redact_text, redact_string_in_payload, _replacement
-from killswitch_ai.core.scanner import Finding
+from killswitch.core.redactor import redact_text, redact_string_in_payload, _replacement
+from killswitch.core.scanner import Finding
 
 
 def _make_finding(finding_type: str, start: int = 0, end: int = 10) -> Finding:

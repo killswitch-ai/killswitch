@@ -65,6 +65,19 @@ def execute_decision(
         _print_block_notice(findings, event_id, provider, operation)
         raise KillswitchBlocked(findings[0], event_id)
 
+    if action == "drop":
+        top = findings[0]
+        _v.v1(f"Decision: DROP  "
+              f"(finding={top.finding_type}, severity={top.severity.upper()})")
+        if _v.is_super():
+            _v.v2(f"ACTION: DROPPING this request.")
+            _v.v2(f"  → The LLM will NOT receive your message.")
+            _v.v2(f"  → A synthetic empty response is returned by provider wrappers.")
+            _v.v2(f"  → No secret value is stored in the logs.")
+            _v.blank()
+        _print_drop_notice(findings, event_id, provider, operation)
+        return "drop", payload
+
     if action == "pause":
         _v.v1(f"Decision: PAUSE  "
               f"(finding={findings[0].finding_type}, severity={findings[0].severity.upper()})")
@@ -103,6 +116,26 @@ def execute_decision(
         return "report_only", payload
 
     return "allow", payload
+
+
+def _print_drop_notice(
+    findings: List[Finding], event_id: str, provider: str, operation: str
+) -> None:
+    top = findings[0]
+    print(
+        f"\n{'─' * 60}\n"
+        f"  killswitch-ai dropped this LLM request.\n\n"
+        f"  Finding : {top.finding_id}\n"
+        f"  Severity: {top.severity.upper()}\n"
+        f"  Reason  : {top.description}\n"
+        f"  Event   : {event_id}\n"
+        f"  Provider: {provider}  Operation: {operation}\n\n"
+        f"  The request was NOT sent to the LLM.\n"
+        f"  Provider wrappers return a synthetic empty response.\n"
+        f"  No secret value was stored.\n"
+        f"{'─' * 60}\n",
+        file=sys.stderr,
+    )
 
 
 def _print_block_notice(

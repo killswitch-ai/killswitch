@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any, Optional
 
 from ..core.config import get_config, Config
@@ -113,6 +114,14 @@ def _guard_payload(
     return final_action, sanitized
 
 
+def _dropped_response() -> Any:
+    return SimpleNamespace(
+        content=[],
+        stop_reason="end_turn",
+        _killswitch_dropped=True,
+    )
+
+
 class GuardedAnthropic:
     """
     A drop-in wrapper for anthropic.Anthropic that scans payloads before sending.
@@ -156,7 +165,9 @@ class _GuardedMessages:
 
     def create(self, **kwargs: Any) -> Any:
         cfg = self._guard._get_config()
-        _, sanitized = _guard_payload(kwargs, "messages.create", cfg)
+        action, sanitized = _guard_payload(kwargs, "messages.create", cfg)
+        if action == "drop":
+            return _dropped_response()
         target = self._real_messages or self._client.messages
         return target.create(**sanitized)
 
