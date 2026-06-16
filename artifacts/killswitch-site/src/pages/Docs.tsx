@@ -10,8 +10,8 @@ const SECTIONS = [
   { id: "installation", label: "Installation" },
   { id: "quickstart", label: "Quick Start" },
   { id: "modes", label: "Control Modes" },
-  { id: "context-manager", label: "Context Manager" },
-  { id: "decorator", label: "Decorator" },
+  { id: "context-manager", label: "GuardedOpenAI / GuardedAnthropic" },
+  { id: "decorator", label: "install()" },
   { id: "guarded-clients", label: "Guarded Clients" },
   { id: "detection", label: "Detection Layers" },
   { id: "wizard", label: "Config Wizard" },
@@ -97,10 +97,11 @@ export default function Docs() {
     <div className="min-h-screen flex flex-col dark bg-background">
       <Helmet>
         <title>Documentation — killswitch-ai</title>
-        <meta name="description" content="Full API reference and configuration guide for killswitch-ai, the local LLM egress control library for Python." />
+        <meta name="description" content="Full API reference for killswitch-ai, the open source Python firewall that stops AI data leaks before they reach the network." />
         <link rel="canonical" href="https://killswitch-ai.com/docs" />
         <meta property="og:url" content="https://killswitch-ai.com/docs" />
         <meta property="og:title" content="Documentation — killswitch-ai" />
+        <meta property="og:description" content="Full API reference for killswitch-ai, the open source Python firewall that stops AI data leaks before they reach the network." />
         <meta property="og:type" content="website" />
       </Helmet>
 
@@ -138,9 +139,10 @@ export default function Docs() {
                 <ChevronRight className="h-3 w-3" />
                 <span className="text-foreground">Documentation</span>
               </div>
+              <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60">Open Source · Apache 2.0 · Stops AI Data Leaks</p>
               <h1 className="text-4xl font-bold tracking-tight">Documentation</h1>
               <p className="text-muted-foreground text-lg">
-                Full reference for installing, configuring, and integrating killswitch-ai into your Python LLM workflows.
+                Full reference for installing, configuring, and integrating killswitch-ai — the open source Python firewall that stops AI data leaks — into your LLM workflows.
               </p>
             </div>
 
@@ -156,7 +158,7 @@ export default function Docs() {
                 No cloud account, API key, or external service is required. All scanning runs in your local Python process.
               </p>
               <Callout type="tip">
-                Pin to a specific version in production: <code className="font-mono text-xs">pip install killswitch-ai==0.1.3</code>
+                Pin to a specific version in production: <code className="font-mono text-xs">pip install killswitch-ai==0.1.7</code>
               </Callout>
             </section>
 
@@ -179,17 +181,18 @@ response = client.chat.completions.create(
     messages=[{"role": "user", "content": "Hello!"}]
 )`} />
               <p className="mt-6 text-muted-foreground">
-                Or use the context manager for block-scoped protection:
+                Or wrap a specific client instance with <code className="font-mono text-sm text-primary">GuardedOpenAI</code>:
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
-import openai
+              <CodeBlock language="python" className="mt-4" code={`from openai import OpenAI
+from killswitch.openai import GuardedOpenAI
 
-with killswitch(mode="kill"):
-    # Raises KillswitchBlocked if secrets detected
-    response = openai.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}]
-    )`} />
+client = GuardedOpenAI(OpenAI())
+
+# All calls on this client are scanned automatically
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": prompt}]
+)`} />
             </section>
 
             {/* ── Modes ── */}
@@ -213,6 +216,11 @@ with killswitch(mode="kill"):
                       <td className="py-3 pr-4 font-mono text-red-400">"kill"</td>
                       <td className="py-3 pr-4">Raises <code className="font-mono text-xs">KillswitchBlocked</code>. Request never sent.</td>
                       <td className="py-3">CI, production servers</td>
+                    </tr>
+                    <tr className="border-b border-white/5">
+                      <td className="py-3 pr-4 font-mono text-orange-400">"drop"</td>
+                      <td className="py-3 pr-4">Cancels the request silently. Returns a synthetic empty response — no exception. Check <code className="font-mono text-xs">response._killswitch_dropped</code>.</td>
+                      <td className="py-3">Background workers, pipelines</td>
                     </tr>
                     <tr className="border-b border-white/5">
                       <td className="py-3 pr-4 font-mono text-yellow-400">"pause"</td>
@@ -240,17 +248,18 @@ with killswitch(mode="kill"):
             {/* ── Context Manager ── */}
             <section>
               <SectionAnchor id="context-manager" />
-              <SectionHeading id="context-manager">Context Manager</SectionHeading>
+              <SectionHeading id="context-manager">GuardedOpenAI / GuardedAnthropic</SectionHeading>
               <p className="mt-4 text-muted-foreground leading-relaxed">
-                The <code className="font-mono text-sm text-primary">killswitch</code> context manager patches OpenAI and Anthropic for the duration of its block, then restores the originals.
+                Wrap a specific client instance so only that client is scanned. The original client is unchanged — useful when you have multiple clients and want selective protection.
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
+              <CodeBlock language="python" className="mt-4" code={`from openai import OpenAI
+from killswitch.openai import GuardedOpenAI
 
-with killswitch(mode="redact"):
-    response = openai.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": user_input}]
-    )`} />
+client = GuardedOpenAI(OpenAI())
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": user_input}]
+)`} />
 
               <SubHeading id="context-manager-params">Parameters</SubHeading>
               <table className="w-full text-sm mt-2">
@@ -264,7 +273,7 @@ with killswitch(mode="redact"):
                 </thead>
                 <tbody>
                   <PropRow name="mode" type='str' default='"pause"'>
-                    One of <code className="font-mono text-xs">"kill"</code>, <code className="font-mono text-xs">"pause"</code>, <code className="font-mono text-xs">"redact"</code>, <code className="font-mono text-xs">"report_only"</code>.
+                    One of <code className="font-mono text-xs">"kill"</code>, <code className="font-mono text-xs">"drop"</code>, <code className="font-mono text-xs">"pause"</code>, <code className="font-mono text-xs">"redact"</code>, <code className="font-mono text-xs">"report_only"</code>.
                   </PropRow>
                   <PropRow name="config" type="Config | None" default="None">
                     Optional <code className="font-mono text-xs">Config</code> object. When omitted, the config is loaded from the nearest <code className="font-mono text-xs">killswitch.yml</code>.
@@ -276,24 +285,24 @@ with killswitch(mode="redact"):
             {/* ── Decorator ── */}
             <section>
               <SectionAnchor id="decorator" />
-              <SectionHeading id="decorator">Decorator</SectionHeading>
+              <SectionHeading id="decorator">install()</SectionHeading>
               <p className="mt-4 text-muted-foreground leading-relaxed">
-                Wrap any function that calls an LLM. The decorator applies the same scanning as the context manager to every invocation of the function.
+                Call <code className="font-mono text-sm text-primary">killswitch.install()</code> once at the top of your script to patch every OpenAI and Anthropic client instantiated afterward — no changes to the rest of your code needed.
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
+              <CodeBlock language="python" className="mt-4" code={`import killswitch
 from openai import OpenAI
 
+killswitch.install()   # patches openai + anthropic globally
 client = OpenAI()
 
-@killswitch(mode="kill")
 def summarize(text: str) -> str:
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": f"Summarize: {text}"}]
     )
     return response.choices[0].message.content`} />
-              <Callout type="warning">
-                The decorator wraps the entire function body. If the function makes multiple LLM calls, all of them are scanned.
+              <Callout type="tip">
+                Call <code className="font-mono text-xs">killswitch.install()</code> before any client is instantiated. Clients created before the call are not patched.
               </Callout>
             </section>
 
@@ -337,7 +346,7 @@ message = client.messages.create(
 
               <SubHeading id="install-helper">Global install()</SubHeading>
               <p className="text-muted-foreground">
-                <code className="font-mono text-sm text-primary">killswitch.install()</code> monkey-patches both <code className="font-mono text-sm">openai</code> and <code className="font-mono text-sm">anthropic</code> modules so all existing client instances are automatically protected.
+                <code className="font-mono text-sm text-primary">killswitch.install()</code> monkey-patches both <code className="font-mono text-sm">openai</code> and <code className="font-mono text-sm">anthropic</code> modules so all subsequently created client instances are automatically protected.
               </p>
               <CodeBlock language="python" className="mt-4" code={`import killswitch
 
@@ -478,7 +487,7 @@ killswitch scan ./prompt_template.txt`,
               <CodeBlock language="yaml" className="mt-4" code={`# killswitch.yml
 
 mode:
-  default_action: pause  # kill | pause | redact | report_only
+  default_action: pause  # kill | drop | pause | redact | report_only
 
 detection:
   prohibited_terms:
@@ -533,12 +542,14 @@ meta:
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Raised in <code className="font-mono text-xs">kill</code> mode (and in <code className="font-mono text-xs">pause</code> mode if the user chooses to block). Inherits from <code className="font-mono text-xs">RuntimeError</code>.
               </p>
-              <CodeBlock language="python" className="mt-4" code={`from killswitch import killswitch
+              <CodeBlock language="python" className="mt-4" code={`from openai import OpenAI
+from killswitch.openai import GuardedOpenAI
 from killswitch.exceptions import KillswitchBlocked
 
+client = GuardedOpenAI(OpenAI())
+
 try:
-    with killswitch(mode="kill"):
-        response = client.chat.completions.create(...)
+    response = client.chat.completions.create(...)
 except KillswitchBlocked as e:
     print(f"Blocked — finding: {e.finding_id}")
     print(f"Event:   {e.event_id}")`} />
