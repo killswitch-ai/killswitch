@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "killswitch-ai"
-version = "0.1.6"
+version = "0.1.7"
 description = "Local LLM egress control for Python developers — prevents API keys, secrets, .env files, and sensitive payloads from being sent to LLM APIs"
 readme = "README.md"
 license = { text = "MIT" }
@@ -32,7 +32,6 @@ dependencies = [
 openai = ["openai>=1.0"]
 anthropic = ["anthropic>=0.20"]
 all = ["openai>=1.0", "anthropic>=0.20"]
-mcp = ["mcp>=1.0.0"]
 dev = [
     "pytest>=7.0",
     "pytest-cov",
@@ -43,7 +42,6 @@ dev = [
 
 [project.scripts]
 killswitch = "killswitch.cli.main:main"
-killswitch-mcp = "killswitch.mcp.server:serve"
 
 [project.urls]
 Homepage = "https://github.com/killswitch-ai/killswitch"
